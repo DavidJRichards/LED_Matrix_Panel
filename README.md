@@ -11,23 +11,24 @@ Arduino sketch for Pro Mini board, uses TD6783AP high-side driver to drive LED a
 
 The software is designed to drive four panels in cascade giving four lines of 240x7 LEDS. only a single panel has been tested so far. 
 
-|LED Connector 1/2/3/4 |Name|Arduino Pin|
-|-------------|----|-----------|
-|1|Clock|13|
-|2|Latch|A2/A3/A4/A5|
-|3|Enable|12|
-|4|Data|11|
-|5|+ve|5v|
-|6|-ve|Gnd|
-|7|-ve|nc|
-|8|Row 7|D2|
-|9|Row 1|D3|
-|10|Row 2|D4|
-|11|Row 3|D5|
-|12|Row 4|D6|
-|13|Row 5|D7|
-|14|Row 6|D8|
+|LED Connector 1/2/3/4 |Name|Arduino Pin|Colour|
+|----------------------|----|-----------|------|
+|1|Clock|13|White|
+|2|Latch|A2/A3/A4/A5|Orange|
+|3|Enable|12|Brown|
+|4|Data|11|Mauve|
+|5|+ve|5v|Red|
+|6|-ve|Gnd|Black|
+|7|-ve|nc|n/a|
+|8|Row 7|D2|Clear|
+|9|Row 1|D3|Clear|
+|10|Row 2|D4|Clear|
+|11|Row 3|D5|Clear|
+|12|Row 4|D6|Clear|
+|13|Row 5|D7|Clear|
+|14|Row 6|D8|Clear|
 
 The signals to all four board connectors are paralled withthe exception to the text line latch signals, these are fed singly from the arduino A2/A3/A4/A5 lines. These connections or similar should be done by the board backplane or whatever is in the origianl housing.
-
+![Connector](images/Connector.jpg)
+Each line of text hhas a correcponding inpput and output connector. Most of the signalls are passed straight through from input to output. The data input terminal takes the serial data clocked by the clock signal. However the data pin on the output is from the end of the shift register chain ready for the next cascaded panel.
 ![Boards](images/Boards.png)
