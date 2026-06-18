@@ -1,0 +1,7 @@
+.program quad_spi
+.side_set 1             ; The side-set pin acts as our shared clock line
+
+.wrap_target
+    out pins, 4   side 0 ; Shift 4 bits from OSR to the 4 data pins, drop clock LOW
+    nop           side 1 ; Hold data valid on lines, drive clock HIGH
+.wrap
