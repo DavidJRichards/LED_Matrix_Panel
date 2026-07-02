@@ -15,3 +15,5 @@ bool loadConfigAndConnect();
 // FIXED: Ensure these match the signatures inside network_engine.cpp exactly
 bool startConfigAndConnect();
 void checkWifiConnectionStep();
+// Add this declaration line inside your src/network_engine.h file:
+void handleToggleFeature();

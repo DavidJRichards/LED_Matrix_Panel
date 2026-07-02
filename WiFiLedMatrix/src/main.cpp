@@ -36,7 +36,9 @@ void setup() {
                 strlcpy(appText3, prof["txt3"] | "", sizeof(appText3));
                 strlcpy(appText4, prof["txt4"] | "", sizeof(appText4));
                 variableMsg = String(appText1);
-            }
+                 // FIXED NON-VOLATILE HOOK: Recover your flag setting right on bootup!
+                appFeatureFlag = prof["feat_flag"] | false; // Defaults to false if empty
+           }
         }
         file.close();
     }
@@ -44,17 +46,15 @@ void setup() {
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
 
-    // Check if configuration mode is forced via hardware jumper or if empty storage detected
     if (digitalRead(CONFIG_PIN) == LOW || !LittleFS.exists("/networks.json")) {
         startConfigPortal();
     } else {
-        // Launch your non-blocking network connection handshake sequence
         if (!startConfigAndConnect()) {
             printAtTextRow(1, "No saved profile in range.", 36);
             startConfigPortal();
         }
     }
-    // CRITICAL HOOK: Fires the initialization call to sync external channels at boot
+
     syncExternalHardware(); 
 
     clearDisplay();
@@ -62,10 +62,8 @@ void setup() {
 }
 
 void loop() {
-    // FIXED: Service your web routes if connected to a router OR if running the setup portal!
-    if (isPortalMode || WiFi.status() == WL_CONNECTED) {
-        server.handleClient();
-    }
+    // FIXED: Web interface handler runs ALWAYS to ensure port 80 is never unresponsive
+    server.handleClient();
     
     // Service local network name discovery packets over the air
     MDNS.update(); 
@@ -79,11 +77,11 @@ void loop() {
     if (currentMillis - lastDisplayUpdate >= displayInterval) {
         lastDisplayUpdate = currentMillis;
 
-        // Skip background string modifications if the portal page is open
+        // Skip background clock alterations if the portal page is active
         if (!isPortalMode && WiFi.status() == WL_CONNECTED && !isConnectingWifi) {
             time_t now = time(nullptr);
             struct tm* timeInfo = localtime(&now);
-            char clockRowBuf[50] = {0};
+            char clockRowBuf[37] = {0};
 
             if (timeInfo->tm_year > 70) {
                 snprintf(clockRowBuf, sizeof(clockRowBuf), "------------- %02d:%02d:%02d -------------", 
@@ -111,7 +109,16 @@ void loop() {
             startConfigAndConnect();
         }
     }
-
-    scan_and_render_display();
-
+    //scan_and_render_display();
+    // ====================================================================
+    // FIXED: Non-Volatile Feature Flag Controls the On-Board LED
+    // Maps the physical hardware pin state directly to your web setting!
+    // ====================================================================
+    if (appFeatureFlag) {
+        digitalWrite(LED_BUILTIN, HIGH); // LED stays on when flag is ACTIVE
+        scan_and_render_display();
+    } else {
+        digitalWrite(LED_BUILTIN, LOW);  // LED stays off when flag is INACTIVE
+    }
 }
+

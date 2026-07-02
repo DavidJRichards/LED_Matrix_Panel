@@ -20,10 +20,12 @@ String fixedMsgLine2 = "------------------------------------";
 String variableMsg   = "Awaiting Scan...";
 
 unsigned long lastDisplayUpdate = 0;
-const unsigned long displayInterval = 2000; 
+const unsigned long displayInterval = 1000; 
 
 // NON-BLOCKING ASYNCHRONOUS MEMORY STORAGE ALLOCATIONS
 bool isConnectingWifi = false;
 unsigned long wifiStepStart = 0;
 int wifiAttemptCount = 0;
 int bestProfileIndex = -1;
+// Initialize your application feature state
+bool appFeatureFlag = false; // Starts off by default

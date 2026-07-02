@@ -13,10 +13,25 @@ void handleRoot() {
         ringBell();
         refreshDisplay();
     }
+
     File file = LittleFS.open("/index.html", "r");
     if (!file) { server.send(404, "text/plain", "FS Error"); return; }
-    server.streamFile(file, "text/html");
+
+    String htmlStream = file.readString();
     file.close();
+
+    htmlStream.replace("%TXT1%", String(appText1));
+    htmlStream.replace("%TXT2%", String(appText2));
+    htmlStream.replace("%TXT3%", String(appText3));
+    htmlStream.replace("%TXT4%", String(appText4));
+
+    String featureStateStr = appFeatureFlag ? "ACTIVE" : "INACTIVE";
+    String featureColorStr = appFeatureFlag ? "#107c41" : "#6c757d";
+
+    htmlStream.replace("%FEAT_STATE%", featureStateStr);
+    htmlStream.replace("%FEAT_COLOR%", featureColorStr);
+
+    server.send(200, "text/html", htmlStream);
 }
 
 void handleSave() {
@@ -31,13 +46,21 @@ void handleSave() {
     File file = LittleFS.open("/networks.json", "r");
     JsonDocument doc;
     if (file) { deserializeJson(doc, file); file.close(); }
+    
+    JsonArray arr = doc.as<JsonArray>();
+    if (arr.isNull()) { arr = doc.to<JsonArray>(); }
 
-    JsonObject obj = doc.add<JsonObject>();
-    obj["ssid"] = newSSID; obj["password"] = newPass;
-    obj["txt1"] = t1; obj["txt2"] = t2; obj["txt3"] = t3; obj["txt4"] = t4;
+    JsonObject obj = arr.add<JsonObject>();
+    obj["ssid"] = newSSID; 
+    obj["password"] = newPass;
+    obj["txt1"] = t1; 
+    obj["txt2"] = t2; 
+    obj["txt3"] = t3; 
+    obj["txt4"] = t4;
 
     file = LittleFS.open("/networks.json", "w");
     serializeJson(doc, file); file.close();
+    
     server.sendContent("HTTP/1.1 303 See Other\r\nLocation: /\r\n\r\n");
 }
 
@@ -91,10 +114,7 @@ void handleCurrentSSID() {
 }
 
 void handleUpdateText() {
-    if (WiFi.status() != WL_CONNECTED) {
-        server.send(400, "text/plain", "Not Connected to a network");
-        return;
-    }
+    if (WiFi.status() != WL_CONNECTED) { server.send(400, "text/plain", "Not Connected"); return; }
 
     String currentSSID = WiFi.SSID();
     String t1 = server.arg("txt1").substring(0, 64);
@@ -111,10 +131,8 @@ void handleUpdateText() {
 
     for (JsonObject profile : arr) {
         if (profile["ssid"].as<String>() == currentSSID) {
-            profile["txt1"] = t1;
-            profile["txt2"] = t2;
-            profile["txt3"] = t3;
-            profile["txt4"] = t4;
+            profile["txt1"] = t1; profile["txt2"] = t2;
+            profile["txt3"] = t3; profile["txt4"] = t4;
             matchedAndUpdated = true;
             break;
         }
@@ -124,18 +142,113 @@ void handleUpdateText() {
         file = LittleFS.open("/networks.json", "w");
         serializeJson(doc, file); file.close();
 
-        // 1. Force the dynamic string allocations into global state arrays
         strlcpy(appText1, t1.c_str(), sizeof(appText1));
         strlcpy(appText2, t2.c_str(), sizeof(appText2));
         strlcpy(appText3, t3.c_str(), sizeof(appText3));
         strlcpy(appText4, t4.c_str(), sizeof(appText4));
         
-        // 2. CRITICAL HOOK: Update your custom channels instantly when modified over Wi-Fi
         syncExternalHardware();
         ringBell();
+
+        fixedMsgLine1 = "IP: " + WiFi.localIP().toString();
+    }
+    server.sendContent("HTTP/1.1 303 See Other\r\nLocation: /\r\n\r\n");
+}
+
+// FIXED: RESTORED NON-VOLATILE TOGGLE HANDLER FUNCTION
+void handleToggleFeature() {
+    appFeatureFlag = !appFeatureFlag;
+    ringBell(); 
+
+    File file = LittleFS.open("/networks.json", "r");
+    JsonDocument doc;
+    if (file) { deserializeJson(doc, file); file.close(); }
+
+    String currentSSID = WiFi.SSID();
+    JsonArray arr = doc.as<JsonArray>();
+    bool profileMatched = false;
+
+    if (!arr.isNull()) {
+        for (JsonObject profile : arr) {
+            if (profile["ssid"].as<String>() == currentSSID) {
+                profile["feat_flag"] = appFeatureFlag;
+                profileMatched = true;
+                break;
+            }
+        }
     }
 
-    server.sendContent("HTTP/1.1 303 See Other\r\nLocation: /\r\n\r\n");
+    if (!profileMatched && !arr.isNull() && arr.size() > 0) {
+        JsonObject profile = arr[0].as<JsonObject>();
+        profile["feat_flag"] = appFeatureFlag;
+    }
+
+    file = LittleFS.open("/networks.json", "w");
+    serializeJson(doc, file); file.close();
+
+    if (appFeatureFlag) {
+        server.send(200, "text/plain", "ACTIVE");
+    } else {
+        server.send(200, "text/plain", "INACTIVE");
+    }
+}
+// split --------
+void handleSelectProfile() {
+    if (!server.hasArg("index")) { server.send(400, "text/plain", "Missing Index"); return; }
+    int targetIndex = server.arg("index").toInt();
+
+    File file = LittleFS.open("/networks.json", "r");
+    if (!file) { server.send(500, "text/plain", "FS Error"); return; }
+    JsonDocument doc;
+    deserializeJson(doc, file);
+    file.close();
+
+    JsonArray storedProfiles = doc.as<JsonArray>();
+    if (targetIndex >= 0 && targetIndex < storedProfiles.size()) {
+        JsonObject profile = storedProfiles[targetIndex].as<JsonObject>();
+        String targetSSID = profile["ssid"].as<String>();
+        String targetPass = profile["password"].as<String>();
+
+        printAtTextRow(0, ">> MANUAL OVERRIDE PORTAL", 36);
+        printAtTextRow(1, "Target: " + targetSSID, 36);
+        printAtTextRow(2, "Resetting wireless...", 36);
+        printAtTextRow(3, "Please wait safely...", 36);
+
+        String transitionHtml = 
+            "<html><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1.0'>"
+            "<title>Switching Networks</title>"
+            "<style>body{font-family:sans-serif;text-align:center;padding:50px;background:#f7f9fa;color:#333;}</style>"
+            "<script>"
+            "setTimeout(function(){ window.location.href = 'http://pico4x20led.local'; }, 3500);"
+            "</script></head><body>"
+            "<h2>\xF0\x9F\x84\x94 Switching Network Profiles...</h2>"
+            "<p>Connecting terminal to <strong>" + targetSSID + "</strong>.</p>"
+            "<p>Please allow 3 seconds for the radio layers to settle.</p>"
+            "</body></html>";
+
+        server.send(200, "text/html", transitionHtml);
+        delay(150); 
+
+        MDNS.end();
+        server.stop();
+        
+        WiFi.softAPdisconnect(true);
+        WiFi.disconnect(true);
+        WiFi.mode(WIFI_OFF); 
+        delay(100);
+        
+        WiFi.mode(WIFI_STA); 
+        delay(100);
+
+        WiFi.begin(targetSSID.c_str(), targetPass.c_str());
+
+        isConnectingWifi = true;
+        bestProfileIndex = targetIndex;
+        wifiStepStart = millis();
+        wifiAttemptCount = 0;
+    } else {
+        server.send(400, "text/plain", "Invalid Profile Index");
+    }
 }
 
 void setupServerRoutes() {
@@ -147,12 +260,21 @@ void setupServerRoutes() {
     server.on("/beep", HTTP_GET, handleBeep);
     server.on("/current-ssid", HTTP_GET, handleCurrentSSID);
     server.on("/updatetext", HTTP_POST, handleUpdateText);
+    server.on("/select-profile", HTTP_GET, handleSelectProfile);
+    
+    // FIXED: RE-REGISTERED FEATURE TOGGLE ROUTE LINK
+    server.on("/toggle-feature", HTTP_GET, handleToggleFeature);
 }
 
 void startConfigPortal() {
     isPortalMode = true;
+    MDNS.end();
+    server.stop();
+    
+    WiFi.disconnect(true);
     WiFi.mode(WIFI_AP);
     WiFi.softAP(CONFIG_AP_SSID);
+    
     setupServerRoutes();
     server.begin();
 
@@ -160,10 +282,9 @@ void startConfigPortal() {
         MDNS.addService("http", "tcp", 80);
     }
 
-    fixedMsgLine1 = "URL: http://pico4x20led.local";
+    fixedMsgLine1 = "SETUP MODE: http://192.168.4.1";
     fixedMsgLine2 = "------------------------------------";
     variableMsg  = "Connect to portal to save sites.";
-    
     refreshDisplay();
 }
 
@@ -204,7 +325,11 @@ bool startConfigAndConnect() {
         printAtTextRow(2, "Connecting to router...", 36);
         printAtTextRow(3, "Please wait safely...", 36);
 
+        MDNS.end();
+        server.stop();
+        
         WiFi.disconnect(true);
+        WiFi.mode(WIFI_STA);
         WiFi.begin(targetSSID.c_str(), targetPass.c_str());
 
         isConnectingWifi = true;
@@ -217,43 +342,43 @@ bool startConfigAndConnect() {
 
 void checkWifiConnectionStep() {
     if (!isConnectingWifi) return;
-
     unsigned long currentMillis = millis();
 
     if (currentMillis - wifiStepStart >= 500) {
         wifiStepStart = currentMillis;
         wifiAttemptCount++;
-
         digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
 
         if (WiFi.status() == WL_CONNECTED) {
-            if (WiFi.localIP().toString() == "0.0.0.0" && wifiAttemptCount < 40) {
-                return; 
-            }
+            if (WiFi.localIP().toString() == "0.0.0.0" && wifiAttemptCount < 40) return; 
 
             isConnectingWifi = false;
+            isPortalMode = false; 
             digitalWrite(LED_BUILTIN, LOW);
 
-            // Re-open local storage to securely parse the matched roaming network text arrays
             File file = LittleFS.open("/networks.json", "r");
             if (file) {
                 JsonDocument doc;
                 if (deserializeJson(doc, file) == DeserializationError::Ok) {
                     JsonArray storedProfiles = doc.as<JsonArray>();
-                    JsonObject profile = storedProfiles[bestProfileIndex].as<JsonObject>();
-
-                    // Securely assign memory strings inside local RAM bounds
-                    strlcpy(appText1, profile["txt1"] | "", sizeof(appText1));
-                    strlcpy(appText2, profile["txt2"] | "", sizeof(appText2));
-                    strlcpy(appText3, profile["txt3"] | "", sizeof(appText3));
-                    strlcpy(appText4, profile["txt4"] | "", sizeof(appText4));
+                    if (bestProfileIndex >= 0 && bestProfileIndex < storedProfiles.size()) {
+                        JsonObject profile = storedProfiles[bestProfileIndex].as<JsonObject>();
+                        strlcpy(appText1, profile["txt1"] | "", sizeof(appText1));
+                        strlcpy(appText2, profile["txt2"] | "", sizeof(appText2));
+                        strlcpy(appText3, profile["txt3"] | "", sizeof(appText3));
+                        strlcpy(appText4, profile["txt4"] | "", sizeof(appText4));
+                        appFeatureFlag = profile["feat_flag"] | false;
+                    }
                 }
                 file.close();
             }
 
-            // CRITICAL HOOK: Called immediately after text elements are successfully recovered from flash!
             syncExternalHardware();
-
+            
+            server.stop();             
+            setupServerRoutes();       
+            server.begin();            
+            
             if (MDNS.begin("pico4x20led")) {
                 MDNS.addService("http", "tcp", 80);
             }
@@ -262,14 +387,11 @@ void checkWifiConnectionStep() {
             tzset();                                       
             configTime(0, 0, "pool.ntp.org", "time.nist.gov"); 
 
-            fixedMsgLine1 = "URL: http://pico4x20led.local";
+            fixedMsgLine1 = "IP: " + WiFi.localIP().toString();
             fixedMsgLine2 = "------------------------------------";
             variableMsg  = String(appText1); 
 
             ringBell();
-            setupServerRoutes();
-            server.begin();
-
             clearDisplay();
             refreshDisplay();
         } 

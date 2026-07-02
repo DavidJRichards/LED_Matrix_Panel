@@ -44,3 +44,11 @@ extern bool isConnectingWifi;
 extern unsigned long wifiStepStart;
 extern int wifiAttemptCount;
 extern int bestProfileIndex;
+
+// Add these to the absolute bottom of src/config.h if they aren't there already:
+extern bool isConnectingWifi;
+extern unsigned long wifiStepStart;
+extern int wifiAttemptCount;
+extern int bestProfileIndex; // <--- Crucial for tracking the manual profile jumper link!
+// Custom application feature variables
+extern bool appFeatureFlag; // Toggled via the web portal button

@@ -3,152 +3,195 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pico W Network Manager</title>
+    <title>PicoW VFD Terminal</title>
     <style>
-        body { font-family: system-ui, sans-serif; background: #f4f4f7; color: #333; max-width: 500px; margin: 20px auto; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .card.accent { border-top: 4px solid #0070f3; }
-        h2 { margin-top: 0; color: #111; }
-        h3 { color: #555; margin-bottom: 10px; }
+        body { font-family: -apple-system, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f7f9fa; }
+        h1, h2, h3 { color: #0078d7; }
+        .card { background: #fff; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08); border-top: 4px solid #0078d7; }
         .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
-        input[type="text"], input[type="password"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        button { background: #0070f3; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; }
-        button:hover { background: #0051a8; }
-        .secondary-btn { background: #666; margin-bottom: 15px; }
-        .secondary-btn:hover { background: #444; }
-        .net-item { display: flex; flex-direction: column; padding: 10px 0; border-bottom: 1px solid #eee; }
-        .net-row { display: flex; justify-content: space-between; align-items: center; }
-        .delete-btn { color: #ff3b30; text-decoration: none; font-size: 14px; font-weight: bold; }
-        .app-meta { font-size: 12px; color: #777; background: #f9f9f9; padding: 6px; border-radius: 4px; margin-top: 5px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input[type="text"], input[type="password"], select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
+        button { background: #0078d7; color: #fff; border: none; padding: 12px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; }
+        button:hover { background: #005a9e; }
+        .btn-danger { background: #d9534f; padding: 6px 12px; width: auto; font-size: 13px; color: #fff; text-decoration: none; border-radius: 4px; display: inline-block; }
+        .btn-success { background: #107c41; padding: 6px 12px; width: auto; font-size: 13px; color: #fff; text-decoration: none; border-radius: 4px; display: inline-block; }
+        .btn-secondary { background: #6c757d; margin-bottom: 10px; }
+        .btn-secondary:hover { background: #5a6268; }
+        .profile-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
+        .status-bar { background: #e1dfdd; padding: 10px; border-radius: 4px; font-weight: bold; margin-bottom: 20px; display: flex; justify-content: space-between; }
     </style>
 </head>
 <body>
 
-    <!-- NEW: Dedicated Text-Only Update Container -->
-    <div class="card accent" id="text-only-card" style="display: none;">
-        <h2>📝 Update Current Location Text</h2>
-        <p style="font-size: 13px; color: #555; margin-top: -10px;">Modifying texts for actively connected network.</p>
+    <h1>Terminal Controller</h1>
+    <div class="status-bar">
+        <span>Active Connection:</span>
+        <span id="active-ssid">Loading...</span>
+    </div>
+    <!-- 1. DISPLAY MESSAGES UPDATE DASHBOARD (PRE-LOADED CONFIGURATION) -->
+    <div class="card">
+        <h2>Update Display Messages</h2>
         <form action="/updatetext" method="POST">
+            <!-- FIXED: Appended string replacement template tokens inside value parameters -->
             <div class="form-group">
-                <label for="utxt1">App Text 1</label>
-                <input type="text" id="utxt1" name="txt1" maxlength="64">
+                <label>Row 2 - Left (Max 18 Chars):</label>
+                <input type="text" name="txt1" maxlength="18" value="%TXT1%">
             </div>
             <div class="form-group">
-                <label for="utxt2">App Text 2</label>
-                <input type="text" id="utxt2" name="txt2" maxlength="64">
+                <label>Row 2 - Right (Max 18 Chars):</label>
+                <input type="text" name="txt2" maxlength="18" value="%TXT2%">
             </div>
             <div class="form-group">
-                <label for="utxt3">App Text 3</label>
-                <input type="text" id="utxt3" name="txt3" maxlength="64">
+                <label>Row 3 - Left (Max 18 Chars):</label>
+                <input type="text" name="txt3" maxlength="18" value="%TXT3%">
             </div>
             <div class="form-group">
-                <label for="utxt4">App Text 4</label>
-                <input type="text" id="utxt4" name="txt4" maxlength="64">
+                <label>Row 3 - Right (Max 18 Chars):</label>
+                <input type="text" name="txt4" maxlength="18" value="%TXT4%">
             </div>
-            <button type="submit" style="background: #28a745;">Apply Text Changes Only</button>
+            <button type="submit">Apply Text Changes Only</button>
         </form>
     </div>
 
+    <!-- 2. STABLE LOCATION PROFILE BUILDER WITH SSID SELECTOR -->
     <div class="card">
-        <h2>Add New Location / Wi-Fi</h2>
-        <button type="button" class="secondary-btn" id="scan-btn" onclick="scanNetworks()">🔍 Scan Nearby Networks</button>
-        <div id="scan-results" style="margin-bottom: 15px; max-height: 150px; overflow-y: auto;"></div>
+        <h2>Add Location Profile</h2>
+        
+        <div class="form-group">
+            <label>Scan Nearby Access Points:</label>
+            <button type="button" class="btn-secondary" onclick="scanWifiNetworks()">Scan Networks</button>
+            <select id="wifi-picker" onchange="applySelectedSSID()" style="margin-top: 10px;">
+                <option value="">-- Select a scanned network --</option>
+            </select>
+        </div>
 
         <form action="/save" method="POST">
             <div class="form-group">
-                <label for="ssid">Network Name (SSID)</label>
-                <input type="text" id="ssid" name="ssid" required to placeholder="Select above or type here">
+                <label>Network SSID:</label>
+                <input type="text" id="target-ssid" name="ssid" required placeholder="Select above or type manually">
             </div>
             <div class="form-group">
-                <label for="password">Wi-Fi Password</label>
-                <input type="password" id="password" name="password" required placeholder="••••••••">
+                <label>Password:</label>
+                <input type="password" name="password" required>
             </div>
-
-            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-            <h3>Application Custom Strings</h3>
-            <div class="form-group">
-                <label for="txt1">App Text 1 (Max 64 chars)</label>
-                <input type="text" id="txt1" name="txt1" maxlength="64">
-            </div>
-            <div class="form-group">
-                <label for="txt2">App Text 2 (Max 64 chars)</label>
-                <input type="text" id="txt2" name="txt2" maxlength="64">
-            </div>
-            <div class="form-group">
-                <label for="txt3">App Text 3 (Max 64 chars)</label>
-                <input type="text" id="txt3" name="txt3" maxlength="64">
-            </div>
-            <div class="form-group">
-                <label for="txt4">App Text 4 (Max 64 chars)</label>
-                <input type="text" id="txt4" name="txt4" maxlength="64">
-            </div>
-            <button type="submit">Save Full Profile</button>
+            <input type="hidden" name="txt1" value="">
+            <input type="hidden" name="txt2" value="">
+            <input type="hidden" name="txt3" value="">
+            <input type="hidden" name="txt4" value="">
+            <button type="submit" style="background: #107c41;">Save Profile Coordinates</button>
         </form>
     </div>
 
-    <div class="card">
-        <h2>Saved Locations</h2>
-        <div id="saved-list">Loading saved networks...</div>
+     <!-- 4. CUSTOM APPLICATION PARAMETERS CARD -->
+    <div class="card" style="border-top-color: #2b88d8;">
+        <h2>Application Parameters</h2>
+        <div class="form-group">
+            <label>System Mode Parameter Toggle:</label>
+            <!-- FIXED: Injected the template color swap token right into the background style property -->
+            <button type="button" id="feature-toggle-btn" style="background: %FEAT_COLOR%; margin-top: 5px;" onclick="executeFeatureToggle()">
+                🔄 Toggle Feature Flag (Current: %FEAT_STATE%)
+            </button>
+        </div>
     </div>
 
+    <!-- 3. QUICK PROFILE SWITCHER OVERRIDES WITH LIVE LABELS -->
+    <div class="card">
+        <h2>Quick Network Selection</h2>
+        <div id="quick-switcher-list">
+            <em>Querying stored file configurations...</em>
+        </div>
+     </div>
+
     <script>
-        function loadSaved() {
-            fetch('/list')
-                .then(res => res.json())
-                .then(data => {
-                    const listEl = document.getElementById('saved-list');
-                    if(data.length === 0) { listEl.innerHTML = "No profiles saved yet."; return; }
-                    listEl.innerHTML = data.map((net, index) => `
-                        <div class="net-item">
-                            <div class="net-row">
-                                <span><strong>${net.ssid}</strong></span>
-                                <a href="/delete?index=${index}" class="delete-btn">Remove</a>
-                            </div>
-                            <div class="app-meta">
-                                📝 T1: ${net.txt1 || '-'} | T2: ${net.txt2 || '-'}<br>
-                                📝 T3: ${net.txt3 || '-'} | T4: ${net.txt4 || '-'}
-                            </div>
-                        </div>
-                    `).join('');
+        // Check current network status and update picker lists on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            fetch('/current-ssid').then(r => r.text()).then(ssid => { 
+                document.getElementById('active-ssid').innerText = ssid; 
+            });
+            renderQuickSwitcherProfiles();
+        });
 
-                    // Check if the board says we are connected to a specific network right now
-                    fetch('/current-ssid')
-                        .then(res => res.text())
-                        .then(currentSsid => {
-                            if (currentSsid && currentSsid !== "OFFLINE") {
-                                const currentNet = data.find(n => n.ssid === currentSsid);
-                                if (currentNet) {
-                                    document.getElementById('text-only-card').style.display = 'block';
-                                    document.getElementById('utxt1').value = currentNet.txt1 || '';
-                                    document.getElementById('utxt2').value = currentNet.txt2 || '';
-                                    document.getElementById('utxt3').value = currentNet.txt3 || '';
-                                    document.getElementById('utxt4').value = currentNet.txt4 || '';
-                                }
-                            }
-                        });
+        // DYNAMIC PROFILE MATRIX: Generates explicit override and delete hooks for any row entry
+        function renderQuickSwitcherProfiles() {
+            const container = document.getElementById('quick-switcher-list');
+            fetch('/list').then(r => r.json()).then(profiles => {
+                container.innerHTML = "";
+                if (!profiles || profiles.length === 0) {
+                    container.innerHTML = "<em>No networks saved inside storage partitions yet.</em>";
+                    return;
+                }
+                profiles.forEach((prof, idx) => {
+                    const div = document.createElement('div');
+                    div.className = "profile-item";
+                    // FIXED: Injects a targeted index pointer into BOTH the connect and delete buttons dynamically
+                    div.innerHTML = `
+                        <span>🌐 <strong>${prof.ssid || ('Profile ' + idx)}</strong></span>
+                        <div style="display: flex; gap: 8px;">
+                            <a href="/select-profile?index=${idx}" class="btn-success">Connect Now</a>
+                            <button type="button" class="btn-danger" style="padding:6px 12px; width:auto; font-size:13px;" onclick="deleteTargetProfile(${idx}, '${prof.ssid}')">Delete</button>
+                        </div>`;
+                    container.appendChild(div);
                 });
+            }).catch(() => {
+                container.innerHTML = "<em>Failed to process local JSON array configurations.</em>";
+            });
         }
 
-        function scanNetworks() {
-            const btn = document.getElementById('scan-btn');
-            const resultsEl = document.getElementById('scan-results');
-            btn.disabled = true;
-            btn.innerText = "Scanning...";
-            fetch('/scan')
-                .then(res => res.json())
-                .then(networks => {
-                    btn.disabled = false; btn.innerText = "🔍 Scan Nearby Networks";
-                    resultsEl.innerHTML = networks.map(net => `
-                        <div class="net-item scan-item" onclick="selectSSID('${net.ssid}')">
-                            <div class="net-row"><span>📱 <strong>${net.ssid}</strong></span><span class="signal">${net.rssi} dBm</span></div>
-                        </div>
-                    `).join('');
-                });
+        // Target Verification Trigger Hook
+        function deleteTargetProfile(index, ssidName) {
+            if (confirm(`Are you sure you want to completely erase the profile for "${ssidName}" (Index ${index}) from system storage?`)) {
+                window.location.href = `/delete?index=${index}`;
+            }
         }
 
-        function selectSSID(ssid) { document.getElementById('ssid').value = ssid; }
-        loadSaved();
+        function scanWifiNetworks() {
+            const picker = document.getElementById('wifi-picker');
+            picker.options.length = 0;
+            picker.options[0] = new Option("Scanning airwaves...", "");
+            
+            fetch('/scan').then(r => r.json()).then(networks => {
+                picker.options.length = 0;
+                picker.options[0] = new Option("-- Select a scanned network --", "");
+                
+                if (networks.length === 0) {
+                    picker.options[1] = new Option("No networks recovered in range", "");
+                    return;
+                }
+
+                networks.forEach(net => {
+                    const optText = `${net.ssid} (${net.rssi} dBm)`;
+                    picker.options[picker.options.length] = new Option(optText, net.ssid);
+                });
+            }).catch(() => {
+                picker.options.length = 0;
+                picker.options[0] = new Option("Scan connection failed", "");
+            });
+        }
+
+        function applySelectedSSID() {
+            const picker = document.getElementById('wifi-picker');
+            if (picker.value !== "") {
+                document.getElementById('target-ssid').value = picker.value;
+            }
+        }
+
+        // INSERT THIS FUNCTION BLOCK DIRECTLY HERE:
+        function executeFeatureToggle() {
+            const btn = document.getElementById('feature-toggle-btn');
+            btn.innerText = "Processing change...";
+            
+            fetch('/toggle-feature')
+                .then(response => response.text())
+                .then(stateStr => {
+                    btn.innerText = `🔄 Toggle Feature Flag (Current: ${stateStr})`;
+                    if (stateStr === "ACTIVE") {
+                        btn.style.background = "#107c41"; 
+                    } else {
+                        btn.style.background = "#6c757d"; 
+                    }
+                });
+        }
+      
     </script>
 </body>
 </html>
