@@ -23,31 +23,31 @@
 </head>
 <body>
 
-    <h1>Terminal Controller</h1>
+    <h1>LED Matrix Controlr</h1>
     <div class="status-bar">
         <span>Active Connection:</span>
         <span id="active-ssid">Loading...</span>
     </div>
-    <!-- 1. DISPLAY MESSAGES UPDATE DASHBOARD (PRE-LOADED CONFIGURATION) -->
+    <!-- 1. DISPLAY MESSAGES UPDATE DASHBOARD (SCALED TO 64 CHARACTERS) -->
     <div class="card">
         <h2>Update Display Messages</h2>
         <form action="/updatetext" method="POST">
-            <!-- FIXED: Appended string replacement template tokens inside value parameters -->
+            <!-- FIXED: Scaled maxlength parameters to 64 and expanded text placeholders -->
             <div class="form-group">
-                <label>Row 2 - Left (Max 18 Chars):</label>
-                <input type="text" name="txt1" maxlength="18" value="%TXT1%">
+                <label>Row 1 (Max 64 Chars):</label>
+                <input type="text" name="txt1" maxlength="64" value="%TXT1%">
             </div>
             <div class="form-group">
-                <label>Row 2 - Right (Max 18 Chars):</label>
-                <input type="text" name="txt2" maxlength="18" value="%TXT2%">
+                <label>Row 2 (Max 64 Chars):</label>
+                <input type="text" name="txt2" maxlength="64" value="%TXT2%">
             </div>
             <div class="form-group">
-                <label>Row 3 - Left (Max 18 Chars):</label>
-                <input type="text" name="txt3" maxlength="18" value="%TXT3%">
+                <label>Row 3 (Max 64 Chars):</label>
+                <input type="text" name="txt3" maxlength="64" value="%TXT3%">
             </div>
             <div class="form-group">
-                <label>Row 3 - Right (Max 18 Chars):</label>
-                <input type="text" name="txt4" maxlength="18" value="%TXT4%">
+                <label>Row 3 (Max 64 Chars):</label>
+                <input type="text" name="txt4" maxlength="64" value="%TXT4%">
             </div>
             <button type="submit">Apply Text Changes Only</button>
         </form>

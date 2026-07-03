@@ -219,7 +219,7 @@ void handleSelectProfile() {
             "<title>Switching Networks</title>"
             "<style>body{font-family:sans-serif;text-align:center;padding:50px;background:#f7f9fa;color:#333;}</style>"
             "<script>"
-            "setTimeout(function(){ window.location.href = 'http://pico4x20led.local'; }, 3500);"
+            "setTimeout(function(){ window.location.href = 'http://LedMatrix.local'; }, 3500);"
             "</script></head><body>"
             "<h2>\xF0\x9F\x84\x94 Switching Network Profiles...</h2>"
             "<p>Connecting terminal to <strong>" + targetSSID + "</strong>.</p>"
@@ -273,12 +273,12 @@ void startConfigPortal() {
     
     WiFi.disconnect(true);
     WiFi.mode(WIFI_AP);
-    WiFi.softAP(CONFIG_AP_SSID);
+    WiFi.softAP("Led_Matrix_Config_Portal");
     
     setupServerRoutes();
     server.begin();
 
-    if (MDNS.begin("pico4x20led")) {
+    if (MDNS.begin("LedMatrix")) {
         MDNS.addService("http", "tcp", 80);
     }
 
@@ -379,7 +379,7 @@ void checkWifiConnectionStep() {
             setupServerRoutes();       
             server.begin();            
             
-            if (MDNS.begin("pico4x20led")) {
+            if (MDNS.begin("LedMatrix")) {
                 MDNS.addService("http", "tcp", 80);
             }
 

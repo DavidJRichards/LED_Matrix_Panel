@@ -1,0 +1,29 @@
+[
+  {
+    "ssid": "Led_Matrix_Config_Portal",
+    "password": "",
+    "txt1": "^g    Initial WiFi settings",
+    "txt2": "SSID: Led_Matrix_Config_Portal",
+    "txt3": "Web:  http://192.168.4.1 ",
+    "txt4": "alt:  LedMatrix.local",
+    "feat_flag": true
+  },
+  {
+    "ssid": "FRITZ!Box 7530 XM",
+    "password": "56414838237004072912",
+    "txt1": "Fritzbox  ,network  ^g",
+    "txt2": "jumps over the lazy dog.",
+    "txt3": "Now is the time for all good men",
+    "txt4": "to come to the aid of the party.",
+    "feat_flag": true
+  },
+  {
+    "ssid": "FRITZ!Box guest access_",
+    "password": "12345678",
+    "txt1": "Guest network",
+    "txt2": "jumps over the lazy dog.",
+    "txt3": "Now is the time for all good men",
+    "txt4": "to come to the aid of the party.",
+    "feat_flag": true
+  }
+]
