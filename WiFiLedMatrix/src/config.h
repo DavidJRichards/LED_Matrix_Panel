@@ -52,3 +52,6 @@ extern int wifiAttemptCount;
 extern int bestProfileIndex; // <--- Crucial for tracking the manual profile jumper link!
 // Custom application feature variables
 extern bool appFeatureFlag; // Toggled via the web portal button
+
+// Add this line at the absolute bottom of your existing src/config.h:
+extern int ledMatrixBrightness; // Active brightness level (0 - 100)

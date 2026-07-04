@@ -23,7 +23,7 @@
 </head>
 <body>
 
-    <h1>LED Matrix Controlr</h1>
+    <h1>LED Matrix Control</h1>
     <div class="status-bar">
         <span>Active Connection:</span>
         <span id="active-ssid">Loading...</span>
@@ -49,7 +49,16 @@
                 <label>Row 3 (Max 64 Chars):</label>
                 <input type="text" name="txt4" maxlength="64" value="%TXT4%">
             </div>
-            <button type="submit">Apply Text Changes Only</button>
+            <!-- Locate this container card inside your data/index.html template file -->
+            <div style="margin: 15px 0; padding: 12px; background: #f3f2f1; border-radius: 6px; border-left: 5px solid #e2a100;">
+                <label for="vfd_bright">LED Matrix Brightness: <span id="bright_num" style="color:#e2a100; font-weight:bold;">%BRIGHT_VAL%</span>%</label>
+                
+                <!-- FIXED: Added width: 100% to force the bar across the entire card layout area -->
+                <input type="range" id="vfd_bright" name="vfd_bright" min="0" max="100" step="5" value="%BRIGHT_VAL%" 
+                    oninput="document.getElementById('bright_num').innerText = this.value;" 
+                    style="width: 100%; display: block; margin-top: 8px; box-sizing: border-box;">
+            </div>
+             <button type="submit">Apply Text Changes Only</button>
         </form>
     </div>
 

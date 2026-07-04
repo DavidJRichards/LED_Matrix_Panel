@@ -29,3 +29,6 @@ int wifiAttemptCount = 0;
 int bestProfileIndex = -1;
 // Initialize your application feature state
 bool appFeatureFlag = false; // Starts off by default
+
+// Add this line at the absolute bottom of your existing src/config.cpp:
+int ledMatrixBrightness = 60; // Default startup intensity register

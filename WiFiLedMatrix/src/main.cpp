@@ -38,7 +38,9 @@ void setup() {
                 variableMsg = String(appText1);
                  // FIXED NON-VOLATILE HOOK: Recover your flag setting right on bootup!
                 appFeatureFlag = prof["feat_flag"] | false; // Defaults to false if empty
-           }
+                    // Recover your brightness layout settings on initial boot
+                ledMatrixBrightness  = prof["vfd_bright"] | 60; // Defaults to 600 if empty
+       }
         }
         file.close();
     }
@@ -61,38 +63,50 @@ void setup() {
     refreshDisplay();
 }
 
+
+
 void loop() {
-    // FIXED: Web interface handler runs ALWAYS to ensure port 80 is never unresponsive
+    // Keep web routes active at all times to prevent unresponsive port 80 blocks
     server.handleClient();
     
-    // Service local network name discovery packets over the air
+    // Service network name discovery profiles
     MDNS.update(); 
 
-    // Service the non-blocking background Wi-Fi connection handshake step engine
+    // Service the non-blocking asynchronous Wi-Fi link step checker
     checkWifiConnectionStep();
 
     unsigned long currentMillis = millis();
 
-    // Asynchronous text page updates and display maintenance
+    // ====================================================================
+    // 1. INDEPENDENT HIGH-SPEED HARDWARE TIME TICKER
+    // This runs completely unhooked from the VFD display timers!
+    // ====================================================================
+    static int lastSentSecond = -1;
+    time_t now = time(nullptr);
+    struct tm* timeInfo = localtime(&now);
+    int currentSecond = timeInfo->tm_sec;
+
+    // High-speed, heap-safe standard C strstr check inside the raw char buffers
+    bool usesTimeMacro = (strstr(appText1, "$TIME$") != nullptr || 
+                          strstr(appText2, "$TIME$") != nullptr || 
+                          strstr(appText3, "$TIME$") != nullptr || 
+                          strstr(appText4, "$TIME$") != nullptr);
+
+    // If the macro is present and the atomic second increments, update your custom output instantly!
+    if (usesTimeMacro && currentSecond != lastSentSecond && !isConnectingWifi && !isPortalMode) {
+        lastSentSecond = currentSecond;
+        
+        // Pushes the freshly ticked time digits straight to lines 0-3 of your external hardware
+        syncExternalHardware(); 
+    }
+
+    // ====================================================================
+    // 2. SLOW STATIC DISPLAY STEPPER (10,000ms / 10 Seconds)
+    // ====================================================================
     if (currentMillis - lastDisplayUpdate >= displayInterval) {
         lastDisplayUpdate = currentMillis;
-
-        // Skip background clock alterations if the portal page is active
-        if (!isPortalMode && WiFi.status() == WL_CONNECTED && !isConnectingWifi) {
-            time_t now = time(nullptr);
-            struct tm* timeInfo = localtime(&now);
-            char clockRowBuf[37] = {0};
-
-            if (timeInfo->tm_year > 70) {
-                snprintf(clockRowBuf, sizeof(clockRowBuf), "------------- %02d:%02d:%02d -------------", 
-                         timeInfo->tm_hour, timeInfo->tm_min, timeInfo->tm_sec);
-            } else {
-                snprintf(clockRowBuf, sizeof(clockRowBuf), "---------- Syncing Clock -----------");
-            }
-            fixedMsgLine2 = String(clockRowBuf);
-        }
-
-        // Keep driving your interleaved single-row state machine ticks
+        
+        // Keep driving your 5-step interleaved row compositor safely at slow speeds
         refreshDisplay();
     }
 
@@ -109,16 +123,16 @@ void loop() {
             startConfigAndConnect();
         }
     }
-    //scan_and_render_display();
+   //scan_and_render_display();
     // ====================================================================
     // FIXED: Non-Volatile Feature Flag Controls the On-Board LED
     // Maps the physical hardware pin state directly to your web setting!
     // ====================================================================
     if (appFeatureFlag) {
         digitalWrite(LED_BUILTIN, HIGH); // LED stays on when flag is ACTIVE
-        scan_and_render_display();
+        if(ledMatrixBrightness>0)
+            scan_and_render_display();
     } else {
         digitalWrite(LED_BUILTIN, LOW);  // LED stays off when flag is INACTIVE
     }
 }
-

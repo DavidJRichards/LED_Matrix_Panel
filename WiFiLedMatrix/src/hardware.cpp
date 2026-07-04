@@ -35,7 +35,11 @@ void moveCursor(uint16_t x, uint16_t y) {
 void printAtTextRow(uint8_t row, String text, uint8_t max_len) {
     uint16_t pixelY = ((row + 1) * 16) - 1; 
     moveCursor(0, pixelY);
-    
+
+    // ====================================================================
+    // SIMPLIFIED: No $TIME$ macro expansions are performed for the VFD screen!
+    // The raw text block string flows straight to the tag stripper filter.
+    // ====================================================================
     char cleanLineBuffer[65] = {0};
     uint8_t cleanIdx = 0;
     int textLength = text.length();
@@ -56,31 +60,29 @@ void printAtTextRow(uint8_t row, String text, uint8_t max_len) {
         }
     }
 
-    char finalOutputBlock[40] = {0};
+    char finalOutputBlock[65] = {0};
     snprintf(finalOutputBlock, sizeof(finalOutputBlock), "%-*.*s", max_len, max_len, cleanLineBuffer);
 
+    // Stream text bytes straight across the hardware wire
     for (uint8_t k = 0; k < max_len; k++) {
         vfdWriteByte(finalOutputBlock[k]);
     }
 }
 
 void refreshDisplay() {
-    // Persistent tracking buffers to monitor user web text updates
     static String lastFixedMsg1 = "";
     static String lastText1 = "";
     static String lastText2 = "";
     static String lastText3 = "";
     static String lastText4 = "";
 
-    // Sequential step machine variables
     static bool sequenceActive = false;
     static uint8_t writeStep = 0;
-
-    // FIXED: Moved array buffer definitions out of the local switch scope to guarantee zero stack overflow corruption
     static char row2Buffer[40] = {0};
     static char row3Buffer[40] = {0};
 
-    // Repaint only if the URL or Custom Web Text strings change
+    // FIXED: The VFD now ONLY checks for literal text modifications from the web server.
+    // Removed the currentSecond checking completely to leave the glass static and quiet!
     if (fixedMsgLine1 != lastFixedMsg1 || String(appText1) != lastText1 || 
         String(appText2) != lastText2 || String(appText3) != lastText3 || 
         String(appText4) != lastText4) {
@@ -93,35 +95,34 @@ void refreshDisplay() {
         
         sequenceActive = true;
         writeStep = 0;
+
+        // One-time chime check when text arrives
+        String t1 = String(appText1); String t2 = String(appText2);
+        String t3 = String(appText3); String t4 = String(appText4);
+        
+        if (t1.indexOf("^g") >= 0 || t1.indexOf("^G") >= 0 || t1.indexOf("\\x07") >= 0 || t1.indexOf((char)0x07) >= 0 ||
+            t2.indexOf("^g") >= 0 || t2.indexOf("^G") >= 0 || t2.indexOf("\\x07") >= 0 || t2.indexOf((char)0x07) >= 0 ||
+            t3.indexOf("^g") >= 0 || t3.indexOf("^G") >= 0 || t3.indexOf("\\x07") >= 0 || t3.indexOf((char)0x07) >= 0 ||
+            t4.indexOf("^g") >= 0 || t4.indexOf("^G") >= 0 || t4.indexOf("\\x07") >= 0 || t4.indexOf((char)0x07) >= 0) {
+            ringBell(); 
+        }
     }
 
-    // THE INTERLEAVED ENGINE STEPPER
+    // THE INTERLEAVED ENGINE STEPPER: Ticks along quietly behind the scenes
     if (sequenceActive) {
         switch (writeStep) {
-            case 0:
-                clearDisplay();
-                writeStep++;
-                break;
-            case 1:
-                printAtTextRow(0, fixedMsgLine1, 36); 
-                writeStep++;
-                break;
-            case 2:
-                printAtTextRow(1, "------------------------------------", 36); 
-                writeStep++;
-                break;
+            case 0: clearDisplay(); writeStep++; break;
+            case 1: printAtTextRow(0, fixedMsgLine1, 36); writeStep++; break;
+            case 2: printAtTextRow(1, "------------------------------------", 36); writeStep++; break;
             case 3:
-                // Merge App Text 1 and App Text 2 side-by-side onto Row 2
                 snprintf(row2Buffer, sizeof(row2Buffer), "%-18.18s%-18.18s", appText1, appText2);
                 printAtTextRow(2, String(row2Buffer), 36);
                 writeStep++;
                 break;
             case 4:
-                // Merge App Text 3 and App Text 4 side-by-side onto Row 3
                 snprintf(row3Buffer, sizeof(row3Buffer), "%-18.18s%-18.18s", appText3, appText4);
                 printAtTextRow(3, String(row3Buffer), 36);
                 
-                // FIXED COMPACT CONTROL: Turn off the engine state completely to clear up data buses
                 sequenceActive = false;
                 writeStep = 0;
                 break;
@@ -167,8 +168,36 @@ void initMyHardware() {
 }
 
 void syncExternalHardware() {
-    print_line(0, appText1);
-    print_line(1, appText2);
-    print_line(2, appText3);
-    print_line(3, appText4);
+    // 1. Capture the raw timestamp integers from the core clock engine
+    time_t now = time(nullptr);
+    struct tm* timeInfo = localtime(&now);
+    char clockBuffer[40] = {0};
+
+    // If the NTP core has handshaked with atomic servers successfully
+    if (timeInfo->tm_year > 70) {
+        snprintf(clockBuffer, sizeof(clockBuffer), "%02d:%02d:%02d", 
+                 timeInfo->tm_hour, timeInfo->tm_min, timeInfo->tm_sec);
+    } else {
+        // Safe fallback indicator while the network handshakes
+        snprintf(clockBuffer, sizeof(clockBuffer), "Syncing...");
+    }
+
+    // 2. FIXED: Create TEMPORARY local string configurations 
+    // This preserves the original raw '$TIME$' tokens inside the global appText arrays!
+    String s1 = String(appText1);
+    String s2 = String(appText2);
+    String s3 = String(appText3);
+    String s4 = String(appText4);
+
+    // 3. Scan and replace the macro token strings on local frames
+    s1.replace("$TIME$", String(clockBuffer));
+    s2.replace("$TIME$", String(clockBuffer));
+    s3.replace("$TIME$", String(clockBuffer));
+    s4.replace("$TIME$", String(clockBuffer));
+
+    // 4. Dispatch the dynamically expanded 64-character text blocks to channels 0-3
+    print_line(0, s1.c_str());
+    print_line(1, s2.c_str());
+    print_line(2, s3.c_str());
+    print_line(3, s4.c_str());
 }

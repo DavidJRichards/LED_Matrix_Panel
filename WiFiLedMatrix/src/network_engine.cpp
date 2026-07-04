@@ -31,6 +31,9 @@ void handleRoot() {
     htmlStream.replace("%FEAT_STATE%", featureStateStr);
     htmlStream.replace("%FEAT_COLOR%", featureColorStr);
 
+        // FIXED WEB HOOK: Swaps out the layout placeholder with your actual live brightness level
+    htmlStream.replace("%BRIGHT_VAL%", String(ledMatrixBrightness));
+
     server.send(200, "text/html", htmlStream);
 }
 
@@ -116,6 +119,9 @@ void handleCurrentSSID() {
 void handleUpdateText() {
     if (WiFi.status() != WL_CONNECTED) { server.send(400, "text/plain", "Not Connected"); return; }
 
+     // FIXED: Parse the slider value at the very top of the function block scope
+    int webBrightness = server.hasArg("vfd_bright") ? server.arg("vfd_bright").toInt() : 60;
+
     String currentSSID = WiFi.SSID();
     String t1 = server.arg("txt1").substring(0, 64);
     String t2 = server.arg("txt2").substring(0, 64);
@@ -133,6 +139,8 @@ void handleUpdateText() {
         if (profile["ssid"].as<String>() == currentSSID) {
             profile["txt1"] = t1; profile["txt2"] = t2;
             profile["txt3"] = t3; profile["txt4"] = t4;
+             // Commit to the non-volatile database profile key
+            profile["vfd_bright"] = webBrightness;
             matchedAndUpdated = true;
             break;
         }
@@ -147,6 +155,8 @@ void handleUpdateText() {
         strlcpy(appText3, t3.c_str(), sizeof(appText3));
         strlcpy(appText4, t4.c_str(), sizeof(appText4));
         
+        // Push configuration straight to the active runtime system register
+        ledMatrixBrightness = webBrightness;
         syncExternalHardware();
         ringBell();
 
@@ -368,7 +378,8 @@ void checkWifiConnectionStep() {
                         strlcpy(appText3, profile["txt3"] | "", sizeof(appText3));
                         strlcpy(appText4, profile["txt4"] | "", sizeof(appText4));
                         appFeatureFlag = profile["feat_flag"] | false;
-                    }
+                         // Sync the active brightness level whenever the chip changes network locations
+                        ledMatrixBrightness  = profile["vfd_bright"] | 60;                    }
                 }
                 file.close();
             }
