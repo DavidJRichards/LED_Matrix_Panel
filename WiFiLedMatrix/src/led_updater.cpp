@@ -28,7 +28,7 @@ void scan_and_render_display();
 
 // Full 5x7 ASCII Font Map (ASCII 32 to 122)
 // 91 characters total. Bit 0 = Top row, Bit 6 = Bottom row.
-const uint8_t alpha_font[91][6] PROGMEM = {
+const uint8_t alpha_font[96][6] PROGMEM = {
   { 0x00, 0x00, 0x00, 0x00, 0x00 }, // 32: Space
   { 0x00, 0x00, 0x5F, 0x00, 0x00 }, // 33: !
   { 0x00, 0x03, 0x00, 0x03, 0x00 }, // 34: "
@@ -59,7 +59,11 @@ const uint8_t alpha_font[91][6] PROGMEM = {
   { 0x06, 0x49, 0x49, 0x29, 0x1E }, // 57: 9
   
   { 0x00, 0x00, 0x36, 0x36, 0x00 }, // 58: :
-  { 0x00, 0x00, 0x5C, 0x00, 0x00 }, // 59: ;
+
+//{ 0x50, 0x36, 0x00, 0x00, 0x00 },  // ';' (Semicolon - Left-aligned colon + comma blend)
+//{ 0x00, 0x00, 0x5C, 0x00, 0x00 }, // 59: ;
+  { 0x00, 0x56, 0x36, 0x00, 0x00 },  // ';' (Semicolon - 2-dot wide top section)
+
   { 0x08, 0x14, 0x22, 0x41, 0x00 }, // 60: <
   { 0x14, 0x14, 0x14, 0x14, 0x14 }, // 61: =
   { 0x00, 0x41, 0x22, 0x14, 0x08 }, // 62: >
@@ -147,7 +151,12 @@ const uint8_t alpha_font[91][6] PROGMEM = {
   { 0x3C, 0x40, 0x30, 0x40, 0x3C }, // 119: w
   { 0x44, 0x28, 0x10, 0x28, 0x44 }, // 120: x
   { 0x0C, 0x50, 0x50, 0x50, 0x3c }, // 121: y
-  { 0x44, 0x64, 0x54, 0x4C, 0x44 }  // 122: z
+  { 0x44, 0x64, 0x54, 0x4C, 0x44 }, // 122: z
+
+  { 0x00, 0x08, 0x36, 0x41, 0x00 }, // 123: {
+  { 0x00, 0x00, 0x7F, 0x00, 0x00 }, // 124: |
+  { 0x00, 0x41, 0x36, 0x08, 0x00 }, // 125: }
+  { 0x04, 0x02, 0x04, 0x08, 0x04 }  // 126: ~
 };
 
 // 12 Custom Characters rotated into Column-Major Format (6 Bytes per Character)
@@ -191,19 +200,9 @@ void print_line(int channel, const char* text) {
     char c = text[i];
     int font_idx = -1;
 
-#if 0
-    // Convert char to font index map
-    if (c >= '0' && c <= '9') {
-      font_idx = c - '0';
-    } else if (c >= 'A' && c <= 'Z') {
-      font_idx = c - 'A' + 10;
-    } else if (c >= 'a' && c <= 'z') {
-      font_idx = c - 'a' + 10; // Auto-map lowercase to uppercase
-    }
-#else
-    if(c>32 && c<=122)
-      font_idx=c-32;
-#endif
+    if(c > 32 && c <= 127)
+      font_idx =(uint8_t)(c - 32);
+
     // If character is a space or invalid, skip space ahead
     if (font_idx == -1) {
       col_cursor += CHAR_WIDTH + CHAR_SPACING;

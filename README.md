@@ -1,34 +1,32 @@
 # LED Matrix Panel
 
-![LED_Panel](images/LED_Panel.png)
 Software to drive vinatge LED panels
 
-Arduino sketch for Pro Mini board, uses TD6783AP high-side driver to drive LED anode banks. LED bit patterns are sent out using SPI device in micro feeding four chains of cascaded shift registers type 75HC595. The seven lines forming a single row of text aer sent sequentially, then a pause of 1mS to display the image formed. The four text lines are linterleaved so that all four first character lines are sent followed by all four second character lines and so on, this minimises the ammount of multiplexing needed, apart from time taken for additional processing each LEDS can be on for a maximum  of 1/7 of the total time. 
+## initial investigation
 
-[Demo sketch](LED_Matrix_4Line_Demo/LED_Matrix_4Line_Demo.ino)
+[Arduino Demo](ArduinoDemo.md)
 
-[Video](https://youtube.com/shorts/09ZpsXYtBmo?si=rDpB5rVtnLxmoRZ1)
+## rp2040 pico-w full panel driver
 
-The software is designed to drive four panels in cascade giving four lines of 240x7 LEDS. only a single panel has been tested so far. 
+The bus station led matrix display now has WiFi, initially it acts as a station which you can connect to to enter your local router details to make a permanent connection. 
 
-|LED Connector 1/2/3/4 |Name|Arduino Pin|Colour|
-|----------------------|----|-----------|------|
-|1|Clock|13|White|
-|2|Latch|A2/A3/A4/A5|Orange|
-|3|Enable|12|Brown|
-|4|Data|11|Mauve|
-|5|+ve|5v|Red|
-|6|-ve|Gnd|Black|
-|7|-ve|nc|n/a|
-|8|Row 7|D2|Clear|
-|9|Row 1|D3|Clear|
-|10|Row 2|D4|Clear|
-|11|Row 3|D5|Clear|
-|12|Row 4|D6|Clear|
-|13|Row 5|D7|Clear|
-|14|Row 6|D8|Clear|
+![wifi setup](images/wifi_setup.tiff)
 
-The signals to all four board connectors are paralled withthe exception to the text line latch signals, these are fed singly from the arduino A2/A3/A4/A5 lines. These connections or similar should be done by the board backplane or whatever is in the origianl housing.
-![Connector](images/Connector.jpg)
-Each line of text hhas a correcponding inpput and output connector. Most of the signalls are passed straight through from input to output. The data input terminal takes the serial data clocked by the clock signal. However the data pin on the output is from the end of the shift register chain ready for the next cascaded panel.
-![Boards](images/Boards.png)
+When you have made a connection to the AP using the SSID shown, then opened the web page at the address given a menu of options is presented:
+
+![web portal](images/web_portal.tiff)
+
+In the menu you can scan for local wifi networks and select new text to appear on the display, special text substitutions exist ^g to ring the external bell, and $TIME$ to show the time from a time server. Here the display updated with the text from the configuration:
+
+![demo](images/demo.tiff)
+
+Any connected wifi station holds its own panel variables, including text and brightness, the actual station can be chosen in the webpage but a scan of available station is used to choose the station to connect to at boot time, the default is the initial configuration access point. The system can be configured to simply only display the initial text if no wifi is available, all the adjustable settings and the web page are held in files on the micro itself
+
+It was suggested to me that the display could show a QR code to help to get it connected but because of the limited resolution and mainly because of the gaps between the lines I couldn’t get this to work. Here is a photo of my QR code attempt, it uses custom characters to form the bitmap in sections.
+
+[qrcode](images/qrcode_test.tiff)
+
+There is a possibility of making a linear barcode to display on the LEDs, I’ll bee trying that but in the meantime the display can show the information needed to log onto its wifi:
+
+I shall probably need to extend the micro’s wifi aerial to the front panel perspex since it sits behind the metal chassis which will inside the metal case in the assembled unit.
+
