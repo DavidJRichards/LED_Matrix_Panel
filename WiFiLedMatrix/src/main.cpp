@@ -5,12 +5,37 @@
 #include <LEAmDNS.h>
 #include <time.h>
 
+#include <ElegantOTA.h>
 #include "config.h"
 #include "hardware.h"
 #include "network_engine.h"
 
+
+void onOTAStart() {
+//  Serial.println("OTA Update Started. Unmounting Filesystem...");
+  LittleFS.end(); // Safely closes all active files and drops the block handles
+}
+
+// Callback function triggered immediately after upload blocks are written
+void onOTAEnd(bool success) {
+  if (success) {
+    //Serial.println("OTA block write complete. Reinitialising filesystem...");
+    
+    // 1. Force release of the old block allocation handles
+    //LittleFS.end(); 
+    //delay(100);
+    
+    // 2. Remount the filesystem to parse the newly uploaded 'littlefs.bin'
+    if (LittleFS.begin()) {
+      //Serial.println("Filesystem successfully reinitialised without reboot!");
+    } else {
+      //Serial.println("Failed to mount the newly uploaded filesystem partition.");
+    }
+  }
+}
+
+//pico_ota picoOta;
 void setup() {
-    Serial.begin(115200);
     pinMode(LED_BUILTIN, OUTPUT);
     pinMode(CONFIG_PIN, INPUT_PULLUP);
  
@@ -64,8 +89,13 @@ void setup() {
 
     clearDisplay();
     refreshDisplay();
-}
 
+  // Attach ElegantOTA dashboard at /update
+  ElegantOTA.begin(&server);    
+  ElegantOTA.onStart(onOTAStart); // Register the pre-flash hook
+  // Register the end hook to refresh mid-runtime
+  ElegantOTA.onEnd(onOTAEnd);
+}
 
 
 void loop() {
