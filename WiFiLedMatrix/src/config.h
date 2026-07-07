@@ -9,6 +9,7 @@
 #define VFD_TX_PIN    19 //8 green
 #define VFD_BUSY_PIN  20 //9 yellow resistor red 
 #define CONFIG_PIN    16 // Physical button jumper to GND to clear files / enter AP mode
+#define LDR_PIN       26
 
 // --- Global Core Drivers & Infrastructure ---
 extern SerialPIO VfdSerial;
@@ -55,3 +56,6 @@ extern bool appFeatureFlag; // Toggled via the web portal button
 
 // Add this line at the absolute bottom of your existing src/config.h:
 extern int ledMatrixBrightness; // Active brightness level (0 - 100)
+extern const unsigned long FILTER_INTERVAL_MS; // used for LDR ambient brightness
+extern const int FILTER_SHIFT;
+extern const int FILTER_WEIGHT; 

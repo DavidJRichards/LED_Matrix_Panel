@@ -32,3 +32,9 @@ bool appFeatureFlag = false; // Starts off by default
 
 // Add this line at the absolute bottom of your existing src/config.cpp:
 int ledMatrixBrightness = 60; // Default startup intensity register
+
+const unsigned long FILTER_INTERVAL_MS = 50; 
+// Shift factor of 6 means internal values are scaled by 64 (2^6).
+// A filter weight of 1 creates a slow, smooth response (~3 second transition time at 50ms intervals).
+const int FILTER_SHIFT = 6;
+const int FILTER_WEIGHT = 1; 

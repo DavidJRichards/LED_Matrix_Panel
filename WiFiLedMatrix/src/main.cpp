@@ -13,6 +13,9 @@ void setup() {
     Serial.begin(115200);
     pinMode(LED_BUILTIN, OUTPUT);
     pinMode(CONFIG_PIN, INPUT_PULLUP);
+ 
+    analogReadResolution(ADC_RESOLUTION);
+    pinMode(LDR_PIN, INPUT);   
 
     initMyHardware();
     led_setup();
@@ -123,16 +126,23 @@ void loop() {
             startConfigAndConnect();
         }
     }
-   //scan_and_render_display();
+   
+
     // ====================================================================
     // FIXED: Non-Volatile Feature Flag Controls the On-Board LED
     // Maps the physical hardware pin state directly to your web setting!
     // ====================================================================
     if (appFeatureFlag) {
         digitalWrite(LED_BUILTIN, HIGH); // LED stays on when flag is ACTIVE
-        if(ledMatrixBrightness>0)
-            scan_and_render_display();
+        int led_brightness = read_ldr_brightness(currentMillis);
+        scan_and_render_display(led_brightness);
     } else {
         digitalWrite(LED_BUILTIN, LOW);  // LED stays off when flag is INACTIVE
+    //    digitalWrite(LED_BUILTIN, HIGH); // LED stays on when flag is ACTIVE
+    //    int led_brightness = read_ldr_brightness(currentMillis);
+        scan_and_render_display(ledMatrixBrightness);
     }
+
+
+
 }

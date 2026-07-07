@@ -201,3 +201,76 @@ void syncExternalHardware() {
     print_line(2, s3.c_str());
     print_line(3, s4.c_str());
 }
+
+struct LutPoint {
+    int adcVal;         // Range: 0 to 4095
+    int brightnessVal;  // Range: 0 to 255
+};
+
+// 2. Updated Lookup Table (LUT) for Pull-Down Configuration
+// Note: Low ADC values = High light intensity = High brightness
+const LutPoint LOOKUP_TABLE[] = {
+    {282,   100},  // Direct intense light: Max brightness (100%)
+    {1000,  100},   // Bright indoor / daylight (~70%)
+    {1969,  35},   // Typical room lighting: Baseline (~35%)
+    {3000,  15},   // Very dim room (~15%)
+    {3833,  5}     // Total darkness: Minimum safety brightness (~5%)
+};
+
+const int LUT_SIZE = sizeof(LOOKUP_TABLE) / sizeof(LOOKUP_TABLE[0]);
+// Initialize with your typical room baseline (1969), scaled up by the shift factor
+int32_t filteredAdcScaled = 1969 << FILTER_SHIFT;
+
+// 3. Robust Interpolation for Inverse/Descending Tables
+int getInterpolatedBrightness(int currentAdc) {
+    // Clamp to absolute bounds (Handling the inverted logic safely)
+    if (currentAdc <= LOOKUP_TABLE[0].adcVal) {
+        return LOOKUP_TABLE[0].brightnessVal;
+    }
+    if (currentAdc >= LOOKUP_TABLE[LUT_SIZE - 1].adcVal) {
+        return LOOKUP_TABLE[LUT_SIZE - 1].brightnessVal;
+    }
+
+    // Find the bounding interval
+    for (int i = 0; i < LUT_SIZE - 1; i++) {
+        int x0 = LOOKUP_TABLE[i].adcVal;
+        int y0 = LOOKUP_TABLE[i].brightnessVal;
+        int x1 = LOOKUP_TABLE[i + 1].adcVal;
+        int y1 = LOOKUP_TABLE[i + 1].brightnessVal;
+
+        // Check if the current reading falls between these points
+        if (currentAdc >= x0 && currentAdc <= x1) {
+            // Integer Interpolation Formula: y = y0 + ((x - x0) * (y1 - y0)) / (x1 - x0)
+            return y0 + ((currentAdc - x0) * (y1 - y0)) / (x1 - x0);
+        }
+    }
+
+    return LOOKUP_TABLE[LUT_SIZE - 1].brightnessVal;
+}
+
+ int read_ldr_brightness(unsigned long currentTime){
+        static int targetBrightness = 35;
+        static unsigned long lastCheckTime = 0;
+
+        if (currentTime - lastCheckTime >= FILTER_INTERVAL_MS) {
+            lastCheckTime = currentTime;
+
+            int rawAdc = analogRead(LDR_PIN);
+
+        // Formula: Scaled = Scaled + Weight * (Raw - (Scaled >> Shift))
+        filteredAdcScaled = filteredAdcScaled + FILTER_WEIGHT * (rawAdc - (filteredAdcScaled >> FILTER_SHIFT));
+
+        // 3. Shift back down to get the clean 12-bit filtered result
+        int smoothedAdc = filteredAdcScaled >> FILTER_SHIFT;
+
+        // 4. Derive 0-100% brightness scale using the clean integer
+        targetBrightness = getInterpolatedBrightness(smoothedAdc);
+
+            Serial.print("Raw ADC: ");
+            Serial.print(rawAdc);
+            Serial.print(" -> Matched 8-bit Brightness: ");
+            Serial.println(targetBrightness);
+
+        }  
+        return targetBrightness;
+    }

@@ -13,5 +13,6 @@ void initMyHardware();
 extern void print_line(int channel, const char* text);
 void syncExternalHardware();
 extern void led_setup(void);
-extern void scan_and_render_display(void); // Continuous display refresh matrix sweep
+extern void scan_and_render_display(int ledBrightnnes); // Continuous display refresh matrix sweep
 extern void led_display_cont(bool enable);
+extern int read_ldr_brightness(unsigned long currentTime);

@@ -25,6 +25,7 @@ uint sm = 0;
 // Functions declarations for C++ strict compilation
 void print_line(int channel, const char* text);
 void scan_and_render_display();
+void scan_and_render_display(int ledBrightnes);
 
 // Full 5x7 ASCII Font Map (ASCII 32 to 122)
 // 91 characters total. Bit 0 = Top row, Bit 6 = Bottom row.
@@ -142,7 +143,7 @@ const uint8_t alpha_font[96][6] PROGMEM = {
   { 0x7C, 0x08, 0x04, 0x04, 0x78 }, // 110: n
   { 0x38, 0x44, 0x44, 0x44, 0x38 }, // 111: o
   { 0x7C, 0x14, 0x14, 0x14, 0x08 }, // 112: p
-  { 0x08, 0x14, 0x14, 0x18, 0x7C }, // 113: q
+  { 0x08, 0x14, 0x14, 0x14, 0x7C }, // 113: q
   { 0x7C, 0x08, 0x04, 0x04, 0x08 }, // 114: r
   { 0x48, 0x54, 0x54, 0x54, 0x20 }, // 115: s
   { 0x04, 0x3F, 0x44, 0x40, 0x20 }, // 116: t
@@ -259,7 +260,6 @@ void led_setup() {
   digitalWrite(LATCH_PIN, LOW);
 
   pinMode(ENABLE_PIN, OUTPUT);
-//  digitalWrite(ENABLE_PIN, LOW);
   digitalWrite(ENABLE_PIN, HIGH);
 
   for (int i = 0; i < MATRIX_ROWS; i++) {
@@ -272,18 +272,13 @@ void led_setup() {
   print_line(1, "1");//Brown Fox");
   print_line(2, "2");//Jumps Over");
   print_line(3, "3");//THe Lazy Dog");
-  scan_and_render_display(); // Continuous display refresh matrix sweep
+  scan_and_render_display(ledMatrixBrightness); // Continuous display refresh matrix sweep
 
-}
-
-void led_loop() {
-//  Serial.print(":");
-  scan_and_render_display(); // Continuous display refresh matrix sweep
 }
 
 // Drives 240 bits per channel per row, then toggles common rows
-void scan_and_render_display() {
-  int  brightness=ledMatrixBrightness*20; // = on time, off for 2000-brightness uS
+void scan_and_render_display(int ledBrightnes) {
+  int  brightness = ledBrightnes * 20; // = on time, off for 2000-brightness uS
   digitalWrite(ENABLE_PIN, LOW); // display on
 
   for (int row = 0; row < MATRIX_ROWS; row++) {
@@ -338,7 +333,8 @@ void scan_and_render_display() {
     digitalWrite(ROW_PINS[row], HIGH);
 
     // 4. Hold active frame on display matrix for 1.5 milliseconds
-     delayMicroseconds(brightness);  // led on time 
+    if(ledBrightnes>5)
+      delayMicroseconds(brightness);  // led on time 
   }
   digitalWrite(ENABLE_PIN, HIGH); // display off
 }
