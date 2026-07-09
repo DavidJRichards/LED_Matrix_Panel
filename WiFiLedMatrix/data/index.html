@@ -97,10 +97,16 @@
                 <label>Password:</label>
                 <input type="password" name="password" required>
             </div>
+            
             <input type="hidden" name="txt1" value="">
             <input type="hidden" name="txt2" value="">
             <input type="hidden" name="txt3" value="">
             <input type="hidden" name="txt4" value="">
+            
+            <!-- FIXED PASS ELEMENTS: Inherit current slider variables automatically on submission profile blocks -->
+            <input type="hidden" id="pass-bright" name="vfd_bright" value="%BRIGHT_VAL%">
+            <input type="hidden" id="pass-interval" name="bell_interval" value="%INTERVAL_VAL%">
+
             <button type="submit" style="background: #107c41;">Save Profile Coordinates</button>
         </form>
     </div>
@@ -237,6 +243,11 @@
                     }
                 });
         }
+        
+        document.querySelector('form[action="/save"]').addEventListener('submit', () => {
+            document.getElementById('pass-bright').value = document.getElementById('vfd_bright').value;
+            document.getElementById('pass-interval').value = document.getElementById('bell_interval').value;
+        });
       
     </script>
 </body>

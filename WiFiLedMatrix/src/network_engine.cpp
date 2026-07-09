@@ -30,10 +30,7 @@ void handleRoot() {
 
     htmlStream.replace("%FEAT_STATE%", featureStateStr);
     htmlStream.replace("%FEAT_COLOR%", featureColorStr);
-
-    // FIXED WEB HOOK: Swaps out the layout placeholder with your actual live brightness level
     htmlStream.replace("%BRIGHT_VAL%", String(ledMatrixBrightness));
-    // FIXED WEB HOOK: Replaces placeholder tags with your live interval minutes variable
     htmlStream.replace("%INTERVAL_VAL%", String(bellIntervalMinutes));
 
     server.send(200, "text/html", htmlStream);
@@ -43,10 +40,14 @@ void handleSave() {
     if (!server.hasArg("ssid") || !server.hasArg("password")) { server.send(400, "text/plain", "Bad Request"); return; }
     String newSSID = server.arg("ssid");
     String newPass = server.arg("password");
-    String t1 = server.arg("txt1").substring(0, 64);
-    String t2 = server.arg("txt2").substring(0, 64);
-    String t3 = server.arg("txt3").substring(0, 64);
-    String t4 = server.arg("txt4").substring(0, 64);
+    String t1 = server.arg("txt1").substring(0, LED_TEXT_SIZE);
+    String t2 = server.arg("txt2").substring(0, LED_TEXT_SIZE);
+    String t3 = server.arg("txt3").substring(0, LED_TEXT_SIZE);
+    String t4 = server.arg("txt4").substring(0, LED_TEXT_SIZE);
+    
+    // FIXED PARSING SAFETY: Reads brightness and interval targets on initial profile creations
+    int webBrightness = server.hasArg("vfd_bright") ? server.arg("vfd_bright").toInt() : 60;
+    int webInterval   = server.hasArg("bell_interval") ? server.arg("bell_interval").toInt() : 0;
 
     File file = LittleFS.open("/networks.json", "r");
     JsonDocument doc;
@@ -62,6 +63,11 @@ void handleSave() {
     obj["txt2"] = t2; 
     obj["txt3"] = t3; 
     obj["txt4"] = t4;
+    obj["feat_flag"] = false;
+    
+    // FIXED: Maps parameters safely inside the array object attributes
+    obj["vfd_bright"] = webBrightness;
+    obj["bell_int"]   = webInterval;
 
     file = LittleFS.open("/networks.json", "w");
     serializeJson(doc, file); file.close();
@@ -118,14 +124,12 @@ void handleCurrentSSID() {
     }
 }
 
-    // Capture the selected regular interval period from the incoming web form data
-    int webInterval = server.hasArg("bell_interval") ? server.arg("bell_interval").toInt() : 0;
-
-    void handleUpdateText() {
+void handleUpdateText() {
     if (WiFi.status() != WL_CONNECTED) { server.send(400, "text/plain", "Not Connected"); return; }
 
-     // FIXED: Parse the slider value at the very top of the function block scope
+    // FIXED SCOPE: Ensure both properties are pulled safely on form updates
     int webBrightness = server.hasArg("vfd_bright") ? server.arg("vfd_bright").toInt() : 60;
+    int webInterval   = server.hasArg("bell_interval") ? server.arg("bell_interval").toInt() : 0;
 
     String currentSSID = WiFi.SSID();
     String t1 = server.arg("txt1").substring(0, LED_TEXT_SIZE);
@@ -144,10 +148,11 @@ void handleCurrentSSID() {
         if (profile["ssid"].as<String>() == currentSSID) {
             profile["txt1"] = t1; profile["txt2"] = t2;
             profile["txt3"] = t3; profile["txt4"] = t4;
-             // Commit to the non-volatile database profile key
+            
+            // FIXED STRUCTURAL LINK: Updates both settings inside your flash array object fields
             profile["vfd_bright"] = webBrightness;
-            // Save settings into the non-volatile JSON profile attributes
-            profile["bell_int"] = webInterval;        matchedAndUpdated = true;
+            profile["bell_int"]   = webInterval;
+            matchedAndUpdated = true;
             break;
         }
     }
@@ -161,24 +166,16 @@ void handleCurrentSSID() {
         strlcpy(appText3, t3.c_str(), sizeof(appText3));
         strlcpy(appText4, t4.c_str(), sizeof(appText4));
         
-        // Push configuration straight to the active runtime system register
+        // Update operational memory clocks instantly
         ledMatrixBrightness = webBrightness;
-        // Push the interval parameter right into the active running system register
         bellIntervalMinutes = webInterval;
-        lastIntervalBellTime = millis(); // Reset the tracking clock reference window
-    
-        syncExternalHardware();
-        // Check for text-embedded tags if present
-        if (t1.indexOf("^g") >= 0 || t2.indexOf("^g") >= 0 || t3.indexOf("^g") >= 0 || t4.indexOf("^g") >= 0) {
-            ringBell();
-        }
+        lastIntervalBellTime = millis(); // Reset interval window
 
+        syncExternalHardware();
         fixedMsgLine1 = "IP: " + WiFi.localIP().toString();
     }
     server.sendContent("HTTP/1.1 303 See Other\r\nLocation: /\r\n\r\n");
 }
-
-// FIXED: RESTORED NON-VOLATILE TOGGLE HANDLER FUNCTION
 void handleToggleFeature() {
     appFeatureFlag = !appFeatureFlag;
     ringBell(); 
@@ -201,8 +198,9 @@ void handleToggleFeature() {
         }
     }
 
+    // FIXED: Safely access the first index of the array list without illegal pointer casting
     if (!profileMatched && !arr.isNull() && arr.size() > 0) {
-        JsonObject profile = arr[0].as<JsonObject>();
+        JsonObject profile = arr[0].as<JsonObject>(); 
         profile["feat_flag"] = appFeatureFlag;
     }
 
@@ -215,6 +213,8 @@ void handleToggleFeature() {
         server.send(200, "text/plain", "INACTIVE");
     }
 }
+
+
 // split --------
 void handleSelectProfile() {
     if (!server.hasArg("index")) { server.send(400, "text/plain", "Missing Index"); return; }
