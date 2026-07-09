@@ -27,10 +27,11 @@ extern const int RSSI_THRESHOLD;
 extern bool isPortalMode;
 
 // --- Global Character String Containers ---
-extern char appText1[65];
-extern char appText2[65];
-extern char appText3[65];
-extern char appText4[65];
+#define LED_TEXT_SIZE 250
+extern char appText1[LED_TEXT_SIZE+1];
+extern char appText2[LED_TEXT_SIZE+1];
+extern char appText3[LED_TEXT_SIZE+1];
+extern char appText4[LED_TEXT_SIZE+1];
 
 // --- Persistent Screen Variables ---
 extern String fixedMsgLine1;
@@ -59,3 +60,11 @@ extern int ledMatrixBrightness; // Active brightness level (0 - 100)
 extern const unsigned long FILTER_INTERVAL_MS; // used for LDR ambient brightness
 extern const int FILTER_SHIFT;
 extern const int FILTER_WEIGHT; 
+
+// Add these to the absolute bottom of src/config.h
+extern int bellPulseCounter;
+extern unsigned long lastBellPulseTime;
+
+// --- Regular Interval Chime Registers ---
+extern int bellIntervalMinutes;         // 0 = Off, otherwise interval in minutes
+extern unsigned long lastIntervalBellTime; // Non-blocking timer clock

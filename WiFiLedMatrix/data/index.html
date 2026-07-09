@@ -32,22 +32,22 @@
     <div class="card">
         <h2>Update Display Messages</h2>
         <form action="/updatetext" method="POST">
-            <!-- FIXED: Scaled maxlength parameters to 64 and expanded text placeholders -->
+            <!-- FIXED: Scaled maxlength parameters to 250 and expanded text placeholders -->
             <div class="form-group">
-                <label>Row 1 (Max 64 Chars):</label>
-                <input type="text" name="txt1" maxlength="64" value="%TXT1%">
+                <label>Row 1 (Max 250 Chars):</label>
+                <input type="text" name="txt1" maxlength="250" value="%TXT1%">
             </div>
             <div class="form-group">
-                <label>Row 2 (Max 64 Chars):</label>
-                <input type="text" name="txt2" maxlength="64" value="%TXT2%">
+                <label>Row 2 (Max 250 Chars):</label>
+                <input type="text" name="txt2" maxlength="250" value="%TXT2%">
             </div>
             <div class="form-group">
-                <label>Row 3 (Max 64 Chars):</label>
-                <input type="text" name="txt3" maxlength="64" value="%TXT3%">
+                <label>Row 3 (Max 250 Chars):</label>
+                <input type="text" name="txt3" maxlength="250" value="%TXT3%">
             </div>
             <div class="form-group">
-                <label>Row 3 (Max 64 Chars):</label>
-                <input type="text" name="txt4" maxlength="64" value="%TXT4%">
+                <label>Row 3 (Max 250 Chars):</label>
+                <input type="text" name="txt4" maxlength="250" value="%TXT4%">
             </div>
             <!-- Locate this container card inside your data/index.html template file -->
             <div style="margin: 15px 0; padding: 12px; background: #f3f2f1; border-radius: 6px; border-left: 5px solid #e2a100;">
@@ -58,6 +58,20 @@
                     oninput="document.getElementById('bright_num').innerText = this.value;" 
                     style="width: 100%; display: block; margin-top: 8px; box-sizing: border-box;">
             </div>
+
+            <!-- REGULAR INTERVAL CHIME SELECTOR SUB-BLOCK -->
+            <div style="margin: 15px 0; padding: 12px; background: #f3f2f1; border-radius: 6px; border-left: 5px solid #0078d7;">
+                <label for="bell_interval">Regular Automated Chime Interval:</label>
+                <select id="bell_interval" name="bell_interval" style="margin-top: 8px;">
+                    <option value="0" id="opt-int-0">Disabled (Off)</option>
+                    <option value="1" id="opt-int-1">Every 1 Minute</option>
+                    <option value="5" id="opt-int-5">Every 5 Minutes</option>
+                    <option value="15" id="opt-int-15">Every 15 Minutes</option>
+                    <option value="30" id="opt-int-30">Every 30 Minutes</option>
+                    <option value="60" id="opt-int-60">Every Hour</option>
+                </select>
+            </div>
+
              <button type="submit">Apply Text Changes Only</button>
         </form>
     </div>
@@ -103,6 +117,14 @@
         </div>
     </div>
 
+    <!-- NEW MANUAL BELL TEST TRIGGER FIELD -->
+    <div class="form-group" style="margin-top: 15px;">
+        <label>Manual Audio Signal Test:</label>
+        <button type="button" style="background: #e2a100; margin-top: 5px;" onclick="fetch('/portal-beep')">
+            🔔 Sound Bell Pulse Trigger Now
+        </button>
+    </div>
+
     <!-- 3. QUICK PROFILE SWITCHER OVERRIDES WITH LIVE LABELS -->
     <div class="card">
         <h2>Quick Network Selection</h2>
@@ -125,6 +147,14 @@
                 document.getElementById('active-ssid').innerText = ssid; 
             });
             renderQuickSwitcherProfiles();
+
+            // FIXED PORTAL ELEMENT: Auto-selects the saved non-volatile interval dropdown configuration
+            const savedIntervalVal = "%INTERVAL_VAL%";
+            const targetOption = document.getElementById('opt-int-' + savedIntervalVal);
+            if (targetOption) {
+                targetOption.selected = true;
+            }
+
         });
 
         // DYNAMIC PROFILE MATRIX: Generates explicit override and delete hooks for any row entry

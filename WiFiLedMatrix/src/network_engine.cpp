@@ -31,8 +31,10 @@ void handleRoot() {
     htmlStream.replace("%FEAT_STATE%", featureStateStr);
     htmlStream.replace("%FEAT_COLOR%", featureColorStr);
 
-        // FIXED WEB HOOK: Swaps out the layout placeholder with your actual live brightness level
+    // FIXED WEB HOOK: Swaps out the layout placeholder with your actual live brightness level
     htmlStream.replace("%BRIGHT_VAL%", String(ledMatrixBrightness));
+    // FIXED WEB HOOK: Replaces placeholder tags with your live interval minutes variable
+    htmlStream.replace("%INTERVAL_VAL%", String(bellIntervalMinutes));
 
     server.send(200, "text/html", htmlStream);
 }
@@ -103,7 +105,7 @@ void handleScan() {
     server.send(200, "application/json", response);
 }
 
-void handleBeep() {
+void handleManualBeep() {
     ringBell();
     server.send(200, "text/plain", "OK");
 }
@@ -116,17 +118,20 @@ void handleCurrentSSID() {
     }
 }
 
-void handleUpdateText() {
+    // Capture the selected regular interval period from the incoming web form data
+    int webInterval = server.hasArg("bell_interval") ? server.arg("bell_interval").toInt() : 0;
+
+    void handleUpdateText() {
     if (WiFi.status() != WL_CONNECTED) { server.send(400, "text/plain", "Not Connected"); return; }
 
      // FIXED: Parse the slider value at the very top of the function block scope
     int webBrightness = server.hasArg("vfd_bright") ? server.arg("vfd_bright").toInt() : 60;
 
     String currentSSID = WiFi.SSID();
-    String t1 = server.arg("txt1").substring(0, 64);
-    String t2 = server.arg("txt2").substring(0, 64);
-    String t3 = server.arg("txt3").substring(0, 64);
-    String t4 = server.arg("txt4").substring(0, 64);
+    String t1 = server.arg("txt1").substring(0, LED_TEXT_SIZE);
+    String t2 = server.arg("txt2").substring(0, LED_TEXT_SIZE);
+    String t3 = server.arg("txt3").substring(0, LED_TEXT_SIZE);
+    String t4 = server.arg("txt4").substring(0, LED_TEXT_SIZE);
 
     File file = LittleFS.open("/networks.json", "r");
     JsonDocument doc;
@@ -141,7 +146,8 @@ void handleUpdateText() {
             profile["txt3"] = t3; profile["txt4"] = t4;
              // Commit to the non-volatile database profile key
             profile["vfd_bright"] = webBrightness;
-            matchedAndUpdated = true;
+            // Save settings into the non-volatile JSON profile attributes
+            profile["bell_int"] = webInterval;        matchedAndUpdated = true;
             break;
         }
     }
@@ -157,8 +163,15 @@ void handleUpdateText() {
         
         // Push configuration straight to the active runtime system register
         ledMatrixBrightness = webBrightness;
+        // Push the interval parameter right into the active running system register
+        bellIntervalMinutes = webInterval;
+        lastIntervalBellTime = millis(); // Reset the tracking clock reference window
+    
         syncExternalHardware();
-        ringBell();
+        // Check for text-embedded tags if present
+        if (t1.indexOf("^g") >= 0 || t2.indexOf("^g") >= 0 || t3.indexOf("^g") >= 0 || t4.indexOf("^g") >= 0) {
+            ringBell();
+        }
 
         fixedMsgLine1 = "IP: " + WiFi.localIP().toString();
     }
@@ -267,13 +280,15 @@ void setupServerRoutes() {
     server.on("/list", HTTP_GET, handleList);
     server.on("/delete", HTTP_GET, handleDelete);
     server.on("/scan", HTTP_GET, handleScan);
-    server.on("/beep", HTTP_GET, handleBeep);
+//    server.on("/beep", HTTP_GET, handleBeep);
     server.on("/current-ssid", HTTP_GET, handleCurrentSSID);
     server.on("/updatetext", HTTP_POST, handleUpdateText);
     server.on("/select-profile", HTTP_GET, handleSelectProfile);
     
     // FIXED: RE-REGISTERED FEATURE TOGGLE ROUTE LINK
     server.on("/toggle-feature", HTTP_GET, handleToggleFeature);
+    // NEW ROUTE: Listens for the manual portal bell button click
+    server.on("/portal-beep", HTTP_GET, handleManualBeep);
 }
 
 void startConfigPortal() {
@@ -379,7 +394,8 @@ void checkWifiConnectionStep() {
                         strlcpy(appText4, profile["txt4"] | "", sizeof(appText4));
                         appFeatureFlag = profile["feat_flag"] | false;
                          // Sync the active brightness level whenever the chip changes network locations
-                        ledMatrixBrightness  = profile["vfd_bright"] | 60;                    }
+                        ledMatrixBrightness  = profile["vfd_bright"] | 60;     
+                        bellIntervalMinutes = profile["bell_int"] | 0;               }
                 }
                 file.close();
             }

@@ -30,3 +30,38 @@ There is a possibility of making a linear barcode to display on the LEDs, I’ll
 
 I shall probably need to extend the micro’s wifi aerial to the front panel perspex since it sits behind the metal chassis which will inside the metal case in the assembled unit.
 
+## Interconnnections
+
+|Connector|Chip   |Name   |Pin#|GPIO|Colour      |
+|---------|-------|-------|----|----|------------|
+|         |LVC245 |       |    |    |            |
+|C        |7-13   |Data 4 |   9|G6  |Yellow4     |
+|B        |6-14   |Data 3 |   7|G5  |Yellow3     |
+|A        |5-15   |Data 2 |   6|G4  |Yellow2     |
+|1        |3-17   |Clock  |   4|G2  |Brown       |
+|2        |9-11   |Latch  |  19|G14 |Red         |
+|3        |2-18   |Enable |  20|G15 |Orange      |
+|4        |4-16   |Data 1 |   5|G3  |Yellow      |
+|5        |       |+ve    |    |5v  |Green       |
+|6        |       |-ve    |    |Gnd |Blue        |
+|7        |       |-ve    |    |Gnd |Mauve       |
+|         |TD6273n|       |    |    |            |
+|8        |7      |Row 7  |  17|G13 |brown/brown |
+|9        |1      |Row 1  |  10|G7  |brown/red   |
+|10       |2      |Row 2  |  11|G8  |brown/orange|
+|11       |3      |Row 3  |  12|G9  |brown/yellow|
+|12       |4      |Row 4  |  14|G10 |brown/green |
+|13       |5      |Row 5  |  15|G11 |brown/blue  |
+|14       |6      |Row 6  |  16|G12 |brown/mauve |
+|         |       |       |    |    |            |
+|n/a      |8      |LED    | n/a|    |            |
+|n/a      |button |Config |  16|    |            |
+|n/a      |sounder|Bell   |  17|    |            |
+|n/a      |VFD    |V-rst  |  18|    |            |
+|         |VFD    |V-tx   |  19|    |            |
+|         |VFD    |V-bsy  |  20|    |            |
+|         |LDR    |LDR    |  26|    |            |
+|         |LDR    |3v3 PU |    |    |            |
+
+
+

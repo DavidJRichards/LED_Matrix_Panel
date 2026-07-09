@@ -68,6 +68,7 @@ void setup() {
                 appFeatureFlag = prof["feat_flag"] | false; // Defaults to false if empty
                     // Recover your brightness layout settings on initial boot
                 ledMatrixBrightness  = prof["vfd_bright"] | 60; // Defaults to 600 if empty
+                bellIntervalMinutes = prof["bell_int"] | 0;
        }
         }
         file.close();
@@ -133,6 +134,19 @@ void loop() {
         syncExternalHardware(); 
     }
 
+    // 4. Driven rapidly at 50ms intervals for custom output scrolling loops
+    if (currentMillis - lastDisplayUpdate >= 50) {
+        lastDisplayUpdate = currentMillis;
+        
+        // STATIC REFRESH CLOCK TICKER
+        // As long as the device is not handshaking or running the local configuration portal,
+        // it continuously dispatches background matrix scroll slices to your custom hardware!
+        if (!isConnectingWifi && !isPortalMode) {
+            syncExternalHardware(); 
+        }
+        
+    }
+
     // ====================================================================
     // 2. SLOW STATIC DISPLAY STEPPER (10,000ms / 10 Seconds)
     // ====================================================================
@@ -171,6 +185,21 @@ void loop() {
     //    digitalWrite(LED_BUILTIN, HIGH); // LED stays on when flag is ACTIVE
     //    int led_brightness = read_ldr_brightness(currentMillis);
         scan_and_render_display(ledMatrixBrightness);
+    }
+
+    // ====================================================================
+    // NEW: AUTOMATED REGULAR INTERVAL CHIME SUPERVISOR
+    // Evaluates your non-volatile interval clock without dynamic loop delays!
+    // ====================================================================
+    if (bellIntervalMinutes > 0 && !isConnectingWifi && !isPortalMode) {
+        // Convert the user-selected slider minutes target directly to milliseconds
+        unsigned long intervalMsTarget = (unsigned long)bellIntervalMinutes * 60000;
+
+        if (currentMillis - lastIntervalBellTime >= intervalMsTarget) {
+            lastIntervalBellTime = currentMillis; // Advance the baseline tracking frame
+            
+            ringBell(); // Sounds the professional 3-pulse acoustic alert burst!
+        }
     }
 
 

@@ -78,11 +78,12 @@ void refreshDisplay() {
 
     static bool sequenceActive = false;
     static uint8_t writeStep = 0;
+    
+    // Sized safely to handle text layouts securely without local scope overlaps
     static char row2Buffer[40] = {0};
     static char row3Buffer[40] = {0};
 
-    // FIXED: The VFD now ONLY checks for literal text modifications from the web server.
-    // Removed the currentSecond checking completely to leave the glass static and quiet!
+    // VFD Change Guard: Only awaken the compositor engine if text actually changes
     if (fixedMsgLine1 != lastFixedMsg1 || String(appText1) != lastText1 || 
         String(appText2) != lastText2 || String(appText3) != lastText3 || 
         String(appText4) != lastText4) {
@@ -95,20 +96,9 @@ void refreshDisplay() {
         
         sequenceActive = true;
         writeStep = 0;
-
-        // One-time chime check when text arrives
-        String t1 = String(appText1); String t2 = String(appText2);
-        String t3 = String(appText3); String t4 = String(appText4);
-        
-        if (t1.indexOf("^g") >= 0 || t1.indexOf("^G") >= 0 || t1.indexOf("\\x07") >= 0 || t1.indexOf((char)0x07) >= 0 ||
-            t2.indexOf("^g") >= 0 || t2.indexOf("^G") >= 0 || t2.indexOf("\\x07") >= 0 || t2.indexOf((char)0x07) >= 0 ||
-            t3.indexOf("^g") >= 0 || t3.indexOf("^G") >= 0 || t3.indexOf("\\x07") >= 0 || t3.indexOf((char)0x07) >= 0 ||
-            t4.indexOf("^g") >= 0 || t4.indexOf("^G") >= 0 || t4.indexOf("\\x07") >= 0 || t4.indexOf((char)0x07) >= 0) {
-            ringBell(); 
-        }
     }
 
-    // THE INTERLEAVED ENGINE STEPPER: Ticks along quietly behind the scenes
+    // THE 5-STEP INTERLEAVED COMPOSITOR ENGINE (Runs quietly only on actual text saves)
     if (sequenceActive) {
         switch (writeStep) {
             case 0: clearDisplay(); writeStep++; break;
@@ -122,20 +112,18 @@ void refreshDisplay() {
             case 4:
                 snprintf(row3Buffer, sizeof(row3Buffer), "%-18.18s%-18.18s", appText3, appText4);
                 printAtTextRow(3, String(row3Buffer), 36);
-                
                 sequenceActive = false;
                 writeStep = 0;
                 break;
-            default:
-                sequenceActive = false;
-                writeStep = 0;
-                break;
+            default: sequenceActive = false; writeStep = 0; break;
         }
     }
 }
 
 void ringBell() {
-    tone(BELL_PIN, 2500, 200);
+    // FIXED: Instead of a single blocking chime, we arm the 3-pulse burst register
+    bellPulseCounter = 3; 
+    lastBellPulseTime = 0; // Forces the first ring to execute immediately
 }
 
 void initMyHardware() {
@@ -168,38 +156,87 @@ void initMyHardware() {
 }
 
 void syncExternalHardware() {
+    unsigned long currentMillis = millis();
+
+    // ====================================================================
+    // UNIFIED NON-BLOCKING MULTI-CHIME OSCILLATOR
+    // Driven directly via the high-frequency 50ms sync loop pipeline!
+    // ====================================================================
+    if (bellPulseCounter > 0) {
+        if (currentMillis - lastBellPulseTime >= 150) {
+            lastBellPulseTime = currentMillis;
+            
+            // Generate a rapid, crisp 70ms audio pulse on your horn pin
+            tone(BELL_PIN, 2500, 70); 
+            bellPulseCounter--; 
+        }
+    }
+
     // 1. Capture the raw timestamp integers from the core clock engine
     time_t now = time(nullptr);
     struct tm* timeInfo = localtime(&now);
-    char clockBuffer[40] = {0};
+    char clockBuffer[40] = {0}; // Sized safely at 40 chars
 
-    // If the NTP core has handshaked with atomic servers successfully
     if (timeInfo->tm_year > 70) {
         snprintf(clockBuffer, sizeof(clockBuffer), "%02d:%02d:%02d", 
                  timeInfo->tm_hour, timeInfo->tm_min, timeInfo->tm_sec);
     } else {
-        // Safe fallback indicator while the network handshakes
         snprintf(clockBuffer, sizeof(clockBuffer), "Syncing...");
     }
 
-    // 2. FIXED: Create TEMPORARY local string configurations 
-    // This preserves the original raw '$TIME$' tokens inside the global appText arrays!
-    String s1 = String(appText1);
-    String s2 = String(appText2);
-    String s3 = String(appText3);
-    String s4 = String(appText4);
+    // 2. Track independent rolling tick clocks for marquee pacing
+    static unsigned long lastHardwareScrollTime = 0;
+    static uint8_t scrollOffset = 0;
 
-    // 3. Scan and replace the macro token strings on local frames
-    s1.replace("$TIME$", String(clockBuffer));
-    s2.replace("$TIME$", String(clockBuffer));
-    s3.replace("$TIME$", String(clockBuffer));
-    s4.replace("$TIME$", String(clockBuffer));
+    if (currentMillis - lastHardwareScrollTime >= 300) {
+        lastHardwareScrollTime = currentMillis;
+        scrollOffset++;
+    }
 
-    // 4. Dispatch the dynamically expanded 64-character text blocks to channels 0-3
-    print_line(0, s1.c_str());
-    print_line(1, s2.c_str());
-    print_line(2, s3.c_str());
-    print_line(3, s4.c_str());
+    // Load raw strings from global 251-byte RAM array buffers
+    String rawArray[4] = { String(appText1), String(appText2), String(appText3), String(appText4) };
+    String finalLines[4];
+
+    // 3. Process the strings for your 40-column LED matrix outputs
+    for (int i = 0; i < 4; i++) {
+        // Expand the live atomic clock macro first
+        rawArray[i].replace("$TIME$", String(clockBuffer));
+
+        // Strip acoustic bell codes out so they don't corrupt LED screen matrices
+        String processedString = "";
+        int rawLength = rawArray[i].length();
+
+        for (int k = 0; k < rawLength; k++) {
+            if (rawArray[i][k] == '^' && (k + 1 < rawLength) && (rawArray[i][k + 1] == 'g' || rawArray[i][k + 1] == 'G')) {
+                k++; 
+            }
+            else if (rawArray[i][k] == '\\' && (k + 3 < rawLength) && rawArray[i][k + 1] == 'x' && rawArray[i][k + 2] == '0' && rawArray[i][k + 3] == '7') {
+                k += 3; 
+            }
+            else if (rawArray[i][k] == 0x07) {
+                // Drop byte
+            }
+            else {
+                processedString += rawArray[i][k];
+            }
+        }
+
+        // Apply 40-column dynamic marquee scroller slicing
+        if (processedString.length() > 40) {
+            String paddedText = processedString + "        "; // 8 spaces loop marquee gap
+            int currentOffset = scrollOffset % paddedText.length();
+            String rolledText = paddedText.substring(currentOffset) + paddedText.substring(0, currentOffset);
+            finalLines[i] = rolledText.substring(0, 40); 
+        } else {
+            finalLines[i] = processedString;
+        }
+    }
+
+    // Dispatch the clean, chime-stripped text blocks to channels 0-3
+    print_line(0, finalLines[0].c_str());
+    print_line(1, finalLines[1].c_str());
+    print_line(2, finalLines[2].c_str());
+    print_line(3, finalLines[3].c_str());
 }
 
 struct LutPoint {
