@@ -186,8 +186,12 @@ const uint8_t qr_font_rotated[12][6] = {
 
 
 // Translates basic text into the logical matrix
-void print_line(int channel, const char* text) {
-  if (channel < 0 || channel >= NUM_CHANNELS) return;
+void print_line(int logical_channel, const char* text) {
+
+  if (logical_channel < 0 || logical_channel >= NUM_CHANNELS) return;
+
+  // REMAP CHANNELS FOR 180° ROTATION:
+  int channel = (NUM_CHANNELS - 1) - logical_channel;
 
   // Clear previous pixel data for this specific channel line
   for (int r = 0; r < MATRIX_ROWS; r++) {
@@ -218,7 +222,7 @@ void print_line(int channel, const char* text) {
       uint8_t column_data = pgm_read_byte(&(alpha_font[font_idx][col]));
       
       for (int row = 0; row < MATRIX_ROWS; row++) {
-        if ((column_data >> ((MATRIX_ROWS-1)-row)) & 1) { // inverted font top to bottom
+        if ((column_data >> row) & 1) { // non inverted font
           text_matrix[channel][row][col_cursor] = 1;
         }
       }
@@ -280,16 +284,16 @@ void scan_and_render_display(int ledBrightnes) {
   int  brightness = ledBrightnes * 20; // = on time, off for 2000-brightness uS
   digitalWrite(ENABLE_PIN, LOW); // display on
 
-  for (int row = 0; row < MATRIX_ROWS; row++) {
-    
+  for (int row = MATRIX_ROWS - 1; row >= 0; row--) {
+  
     uint32_t bit_accumulator = 0;
     int packed_slices = 0;
 
     // Stream 240 columns sequentially for this row phase
     for (int col = 0; col < MATRIX_COLS; col++) {
-      
+ 
     // If the image is mirrored, reverse the index order:
-    int target_col = (MATRIX_COLS - 1) - col; 
+    int target_col =  col-60; // ** kludge needed when display inverted **
 
     // Pull bits from all 4 channels at this specific coordinate
       uint32_t slice = 0;
