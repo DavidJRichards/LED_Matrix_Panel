@@ -236,8 +236,7 @@ void led_display_cont(bool enable){
 }
 
 void led_setup() {
-  Serial.begin(115200);
-  Serial.println("Init ...");
+  Serial.println("led_setup...");
   // Initialize PIO 4-channel driver using state machine 0
   uint offset = pio_add_program(pio, &quad_spi_program);
   pio_sm_config c = quad_spi_program_get_default_config(offset);

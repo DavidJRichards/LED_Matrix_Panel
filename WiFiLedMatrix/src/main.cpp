@@ -35,22 +35,52 @@ void onOTAEnd(bool success) {
 }
 
 //pico_ota picoOta;
+
 void setup() {
+    // 1. Initialize the USB hardware serial debugging pipeline
+    Serial.begin(115200);
+
+    // Time-Bounded Serial Monitor Handshake Pass
+    unsigned long serialWaitStart = millis();
+    while (!Serial) {
+        if (millis() - serialWaitStart >= 3000) {
+            break; 
+        }
+        delay(10); 
+    }
+
+    // ====================================================================
+    // FIXED BUFFER PASS: Allow the built-in terminal cache to stabilize
+    // ====================================================================
+    if (Serial) {
+        delay(200);      // Give the VS Code monitoring pane 200ms to open up
+        Serial.flush();  // Force the internal chip hardware queues to clear completely
+        Serial.println(); // Print a clean empty spacer line to sync the terminal rows
+    }
+
+    Serial.println("[SYSTEM] Debugging stream linked successfully. Commencing initialization...");
+
+    // 2. Initialize physical hardware components and custom CGRAM font profiles
+    initMyHardware();
+    Serial.println("[SYSTEM] Motherboard peripheral pins and custom font profiles armed.");
+    
+    // ... Keep the remainder of your setup() loading routines exactly as they are ...
+    // 3. Mount and check the local flash file storage partition
+    if (!LittleFS.begin()) {
+        Serial.println("[CRITICAL ERROR] LittleFS flash storage partition failed to mount!");
+    } else {
+        Serial.println("[LittleFS] Storage partition mounted cleanly.");
+    }
+
+    // ... Keep the remainder of your setup() loading routines and json file parsing loops exactly as they are ...
+
     pinMode(LED_BUILTIN, OUTPUT);
     pinMode(CONFIG_PIN, INPUT_PULLUP);
  
     analogReadResolution(ADC_RESOLUTION);
     pinMode(LDR_PIN, INPUT);   
 
-    initMyHardware();
     led_setup();
-
-    printAtTextRow(0, "System Initialization...", 36);
-
-    if (!LittleFS.begin()) {
-        printAtTextRow(1, "FS MOUNT FAILURE! Format Required.", 36);
-        return;
-    }
 
     File file = LittleFS.open("/networks.json", "r");
     if (file) {

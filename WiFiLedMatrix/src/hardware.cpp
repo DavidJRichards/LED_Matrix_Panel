@@ -302,12 +302,12 @@ int getInterpolatedBrightness(int currentAdc) {
 
         // 4. Derive 0-100% brightness scale using the clean integer
         targetBrightness = getInterpolatedBrightness(smoothedAdc);
-
+#if 0
             Serial.print("Raw ADC: ");
             Serial.print(rawAdc);
             Serial.print(" -> Matched 8-bit Brightness: ");
             Serial.println(targetBrightness);
-
+#endif
         }  
         return targetBrightness;
     }

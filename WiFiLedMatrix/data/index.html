@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PicoW VFD Terminal</title>
+    <title>LED Matrix Control</title>
     <style>
         body { font-family: -apple-system, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f7f9fa; }
         h1, h2, h3 { color: #0078d7; }
@@ -23,11 +23,19 @@
 </head>
 <body>
 
+    <!-- UPDATED: STATUS BAR WITH ACTIVE CONFIGURATION TRACKING -->
     <h1>LED Matrix Control</h1>
-    <div class="status-bar">
-        <span>Active Connection:</span>
-        <span id="active-ssid">Loading...</span>
+    <div class="status-bar" style="background: #e1dfdd; padding: 12px; border-radius: 4px; font-weight: bold; margin-bottom: 20px; display: flex; flex-direction: column; gap: 4px;">
+        <div style="display: flex; justify-content: space-between;">
+            <span>Active Network:</span>
+            <span id="active-ssid">%CONNECTED_SSID%</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-top: 1px solid #ccc; padding-top: 4px; margin-top: 4px;">
+            <span>Active IP Allocation:</span>
+            <span style="color: #0078d7;">%CONNECTED_IP%</span>
+        </div>
     </div>
+
     <!-- 1. DISPLAY MESSAGES UPDATE DASHBOARD (SCALED TO 64 CHARACTERS) -->
     <div class="card">
         <h2>Update Display Messages</h2>
@@ -94,8 +102,9 @@
                 <input type="text" id="target-ssid" name="ssid" required placeholder="Select above or type manually">
             </div>
             <div class="form-group">
-                <label>Password:</label>
-                <input type="password" name="password" required>
+                <label>Password (Leave blank for open networks):</label>
+                <!-- FIXED: Removed the 'required' attribute constraint entirely -->
+                <input type="password" name="password">            
             </div>
             
             <input type="hidden" name="txt1" value="">
@@ -149,9 +158,6 @@
     <script>
         // Check current network status and update picker lists on page load
         window.addEventListener('DOMContentLoaded', () => {
-            fetch('/current-ssid').then(r => r.text()).then(ssid => { 
-                document.getElementById('active-ssid').innerText = ssid; 
-            });
             renderQuickSwitcherProfiles();
 
             // FIXED PORTAL ELEMENT: Auto-selects the saved non-volatile interval dropdown configuration
