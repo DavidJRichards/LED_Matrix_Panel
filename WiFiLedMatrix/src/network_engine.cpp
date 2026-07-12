@@ -262,7 +262,7 @@ void setupServerRoutes() {
     server.on("/list", HTTP_GET, handleList);
     server.on("/delete", HTTP_GET, handleDelete);
     server.on("/scan", HTTP_GET, handleScan);
-    server.on("/beep", HTTP_GET, handleManualBeep);
+    server.on("/portal-beep", HTTP_GET, handleManualBeep);
     server.on("/current-ssid", HTTP_GET, handleCurrentSSID);
     server.on("/updatetext", HTTP_POST, handleUpdateText);
     server.on("/select-profile", HTTP_GET, handleSelectProfile);
