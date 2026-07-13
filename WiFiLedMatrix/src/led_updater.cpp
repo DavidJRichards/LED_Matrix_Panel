@@ -5,7 +5,8 @@
 // Display Configuration
 const int NUM_CHANNELS  = 4;   // 4 Text Lines (one per channel)
 const int MATRIX_ROWS   = 7;   // 7 multiplexed rows per character
-const int MATRIX_COLS   = 240; // 240 horizontal columns wide
+#define MATRIX_PAD        12
+const int MATRIX_COLS   = (180+MATRIX_PAD); // 180 horizontal columns wide
 const int CHAR_WIDTH    = 5;   // Width of one character in pixels
 const int CHAR_SPACING  = 1;   // Blank pixel columns between letters
 
@@ -279,7 +280,7 @@ void led_setup() {
 
 }
 
-// Drives 240 bits per channel per row, then toggles common rows
+// Drive 180 bits per channel per row, then toggles common rows
 void scan_and_render_display(int ledBrightnes) {
   int  brightness = ledBrightnes * 20; // = on time, off for 2000-brightness uS
   digitalWrite(ENABLE_PIN, LOW); // display on
@@ -289,11 +290,11 @@ void scan_and_render_display(int ledBrightnes) {
     uint32_t bit_accumulator = 0;
     int packed_slices = 0;
 
-    // Stream 240 columns sequentially for this row phase
+    // Stream 180 columns sequentially for this row phase
     for (int col = 0; col < MATRIX_COLS; col++) {
  
     // If the image is mirrored, reverse the index order:
-    int target_col =  col-60; // ** kludge needed when display inverted **
+    int target_col =  col-MATRIX_PAD; // ** kludge needed when display inverted **
 
     // Pull bits from all 4 channels at this specific coordinate
       uint32_t slice = 0;

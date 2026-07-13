@@ -222,11 +222,11 @@ void syncExternalHardware() {
         }
 
         // Apply 40-column dynamic marquee scroller slicing
-        if (processedString.length() > 40) {
+        if (processedString.length() > 30) {
             String paddedText = processedString + "        "; // 8 spaces loop marquee gap
             int currentOffset = scrollOffset % paddedText.length();
             String rolledText = paddedText.substring(currentOffset) + paddedText.substring(0, currentOffset);
-            finalLines[i] = rolledText.substring(0, 40); 
+            finalLines[i] = rolledText.substring(0, 30); 
         } else {
             finalLines[i] = processedString;
         }
