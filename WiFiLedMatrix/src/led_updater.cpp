@@ -6,7 +6,7 @@
 const int NUM_CHANNELS  = 4;   // 4 Text Lines (one per channel)
 const int MATRIX_ROWS   = 7;   // 7 multiplexed rows per character
 #define MATRIX_PAD        12
-const int MATRIX_COLS   = (180+MATRIX_PAD); // 180 horizontal columns wide
+const int MATRIX_COLS   = 180; // 180 horizontal columns wide
 const int CHAR_WIDTH    = 5;   // Width of one character in pixels
 const int CHAR_SPACING  = 1;   // Blank pixel columns between letters
 
@@ -291,21 +291,18 @@ void scan_and_render_display(int ledBrightnes) {
     int packed_slices = 0;
 
     // Stream 180 columns sequentially for this row phase
-    for (int col = 0; col < MATRIX_COLS; col++) {
+    for (int target_col = -MATRIX_PAD; target_col < (MATRIX_COLS); target_col++) {
  
-    // If the image is mirrored, reverse the index order:
-    int target_col =  col-MATRIX_PAD; // ** kludge needed when display inverted **
+      // Pull bits from all 4 channels at this specific coordinate
+        uint32_t slice = 0;
+        slice |= (!text_matrix[0][row][target_col]) << 0;
+        slice |= (!text_matrix[1][row][target_col]) << 1;
+        slice |= (!text_matrix[2][row][target_col]) << 2;
+        slice |= (!text_matrix[3][row][target_col]) << 3;
 
-    // Pull bits from all 4 channels at this specific coordinate
-      uint32_t slice = 0;
-      slice |= (!text_matrix[0][row][target_col]) << 0;
-      slice |= (!text_matrix[1][row][target_col]) << 1;
-      slice |= (!text_matrix[2][row][target_col]) << 2;
-      slice |= (!text_matrix[3][row][target_col]) << 3;
-
-      // Pack 4 bits into current 32-bit hardware register slot
-      bit_accumulator |= (slice << (packed_slices * 4));
-      packed_slices++;
+        // Pack 4 bits into current 32-bit hardware register slot
+        bit_accumulator |= (slice << (packed_slices * 4));
+        packed_slices++;
 
       // When register is full (8 slices * 4 bits = 32 bits), send to PIO FIFO
       if (packed_slices == 8) {
@@ -314,11 +311,6 @@ void scan_and_render_display(int ledBrightnes) {
         packed_slices = 0;
       }
 
-    }
-
-    // Flush remaining residual bits to hardware
-    if (packed_slices > 0) {
-      pio_sm_put_blocking(pio, sm, bit_accumulator);
     }
 
     // --- LATCH AND MUTEX DISPLAY REFRESH STEP ---
