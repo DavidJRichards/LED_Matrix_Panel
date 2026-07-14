@@ -5,7 +5,6 @@
 // Display Configuration
 const int NUM_CHANNELS  = 4;   // 4 Text Lines (one per channel)
 const int MATRIX_ROWS   = 7;   // 7 multiplexed rows per character
-#define MATRIX_PAD        12
 const int MATRIX_COLS   = 180; // 180 horizontal columns wide
 const int CHAR_WIDTH    = 5;   // Width of one character in pixels
 const int CHAR_SPACING  = 1;   // Blank pixel columns between letters
@@ -284,34 +283,47 @@ void led_setup() {
 void scan_and_render_display(int ledBrightnes) {
   int  brightness = ledBrightnes * 20; // = on time, off for 2000-brightness uS
   digitalWrite(ENABLE_PIN, LOW); // display on
-
+    // 1. Inverted Vertical Scan (Row 6 down to 0)
   for (int row = MATRIX_ROWS - 1; row >= 0; row--) {
-  
+    
     uint32_t bit_accumulator = 0;
     int packed_slices = 0;
 
-    // Stream 180 columns sequentially for this row phase
-    for (int target_col = -MATRIX_PAD; target_col < (MATRIX_COLS); target_col++) {
- 
-      // Pull bits from all 4 channels at this specific coordinate
-        uint32_t slice = 0;
-        slice |= (!text_matrix[0][row][target_col]) << 0;
-        slice |= (!text_matrix[1][row][target_col]) << 1;
-        slice |= (!text_matrix[2][row][target_col]) << 2;
-        slice |= (!text_matrix[3][row][target_col]) << 3;
+    // --- STEP A: PUSH 4 DUMMY CLOCK PADS FIRST ---
+    // Because 180 cols is 4 cols short of a 32-bit chunk (23 words * 8 slices = 184 cols),
+    // we send 4 blank dummy slices at the beginning of the row.
+    // Inverted Display Rule: 0b1111 represents "all channels dark"
+    for (int pad = 0; pad < 4; pad++) {
+      uint32_t blank_slice = 0x0F; 
+      bit_accumulator |= (blank_slice << (packed_slices * 4));
+      packed_slices++;
+    }
 
-        // Pack 4 bits into current 32-bit hardware register slot
-        bit_accumulator |= (slice << (packed_slices * 4));
-        packed_slices++;
+    // --- STEP B: STREAM YOUR LOGICAL DATA (179 down to 0) ---
+    for (int col = 0; col < MATRIX_COLS ; col++) {
+      
+      uint32_t slice = 0;
+      slice |= (text_matrix[0][row][col] & 1) << 0; // Layer 0 -> Pin 3
+      slice |= (text_matrix[1][row][col] & 1) << 1; // Layer 1 -> Pin 4
+      slice |= (text_matrix[2][row][col] & 1) << 2; // Layer 2 -> Pin 5
+      slice |= (text_matrix[3][row][col] & 1) << 3; // Layer 3 -> Pin 6
 
-      // When register is full (8 slices * 4 bits = 32 bits), send to PIO FIFO
+      // Pixel Inversion (Masked to lowest 4 bits)
+      slice = (~slice) & 0x0F;
+
+      bit_accumulator |= (slice << (packed_slices * 4));
+      packed_slices++;
+
+      // Every 8 slices (32 bits complete), push straight to hardware
       if (packed_slices == 8) {
         pio_sm_put_blocking(pio, sm, bit_accumulator);
         bit_accumulator = 0;
         packed_slices = 0;
       }
-
     }
+
+    // NOTE: Because (4 pads + 180 cols) = 184 cols, which is exactly 23 words,
+    // packed_slices will ALWAYS equal 0 here. No trailing flush block is required!
 
     // --- LATCH AND MUTEX DISPLAY REFRESH STEP ---
     // 1. Turn off row drivers to clear the display (Prevents ghosting)
