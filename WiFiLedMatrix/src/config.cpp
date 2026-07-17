@@ -31,7 +31,8 @@ int bestProfileIndex = -1;
 bool appFeatureFlag = false; // Starts off by default
 
 // Add this line at the absolute bottom of your existing src/config.cpp:
-int ledMatrixBrightness = 60; // Default startup intensity register
+int ledMatrixBrightness = 5; // Default startup intensity register
+int led_brightness = ledMatrixBrightness;
 
 const unsigned long FILTER_INTERVAL_MS = 50; 
 // Shift factor of 6 means internal values are scaled by 64 (2^6).

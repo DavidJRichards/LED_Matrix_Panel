@@ -57,6 +57,7 @@ extern bool appFeatureFlag; // Toggled via the web portal button
 
 // Add this line at the absolute bottom of your existing src/config.h:
 extern int ledMatrixBrightness; // Active brightness level (0 - 100)
+extern int led_brightness;      // Active brightness level (0 - 100)
 extern const unsigned long FILTER_INTERVAL_MS; // used for LDR ambient brightness
 extern const int FILTER_SHIFT;
 extern const int FILTER_WEIGHT; 

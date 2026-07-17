@@ -10,6 +10,11 @@
 #include "hardware.h"
 #include "network_engine.h"
 
+#if 0
+#include <DNSServer.h>  // attempt to make autoload 
+const byte DNS_PORT = 53;
+DNSServer dnsServer;
+#endif
 
 void onOTAStart() {
 //  Serial.println("OTA Update Started. Unmounting Filesystem...");
@@ -80,7 +85,7 @@ void setup() {
     analogReadResolution(ADC_RESOLUTION);
     pinMode(LDR_PIN, INPUT);   
 
-    led_setup();
+    // led_setup(); used to be called here before split off to setup1() task
 
     File file = LittleFS.open("/networks.json", "r");
     if (file) {
@@ -109,6 +114,11 @@ void setup() {
 
     if (digitalRead(CONFIG_PIN) == LOW || !LittleFS.exists("/networks.json")) {
         startConfigPortal();
+#if 0
+          // Start DNS Server. IPAddress(192, 168, 4, 1) is the standard softAP IP
+        dnsServer.start(DNS_PORT, "*", IPAddress(192, 168, 4, 1));
+#endif
+
     } else {
         if (!startConfigAndConnect()) {
             printAtTextRow(1, "No saved profile in range.", 36);
@@ -130,6 +140,11 @@ void setup() {
 
 
 void loop() {
+#if 0
+    // 1. ADD THIS: Keep processing background DNS rerouting
+    dnsServer.processNextRequest();
+#endif
+
     // Keep web routes active at all times to prevent unresponsive port 80 blocks
     server.handleClient();
     
@@ -208,14 +223,13 @@ void loop() {
     // ====================================================================
     if (appFeatureFlag) {
         digitalWrite(LED_BUILTIN, HIGH); // LED stays on when flag is ACTIVE
-        int led_brightness = read_ldr_brightness(currentMillis);
-        scan_and_render_display(led_brightness);
+        led_brightness = read_ldr_brightness(currentMillis);
     } else {
         digitalWrite(LED_BUILTIN, LOW);  // LED stays off when flag is INACTIVE
-    //    digitalWrite(LED_BUILTIN, HIGH); // LED stays on when flag is ACTIVE
-    //    int led_brightness = read_ldr_brightness(currentMillis);
-        scan_and_render_display(ledMatrixBrightness);
+        led_brightness = ledMatrixBrightness;
     }
+
+    // scan_and_render_display(led_brightness); used to be called here before split off to loop1() task
 
     // ====================================================================
     // NEW: AUTOMATED REGULAR INTERVAL CHIME SUPERVISOR

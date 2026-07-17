@@ -15,9 +15,29 @@ void handleRoot() {
         ringBell();
         refreshDisplay();
     }
+#if 0 // attempt to make autoload 
+    // Prevents the phone from caching standard internet pages over your local portal
+    server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    server.sendHeader("Pragma", "no-cache");
+    server.sendHeader("Expires", "-1");
+#endif
     String pageBuffer;
     buildPreloadedDashboard(pageBuffer); // Invokes decoupled formatting engine
     server.send(200, "text/html", pageBuffer);
+}
+
+void handleFavicon() {
+    // 1. Look for the SVG file instead
+    if (LittleFS.exists("/favicon.svg")) {
+        File file = LittleFS.open("/favicon.svg", "r");
+        
+        // 2. Crucial: Change MIME type to image/svg+xml
+        server.streamFile(file, "image/svg+xml");
+        
+        file.close();
+    } else {
+        server.send(404, "text/plain", "SVG Favicon Missing");
+    }
 }
 
 void handleSave() {
@@ -267,6 +287,10 @@ void setupServerRoutes() {
     server.on("/updatetext", HTTP_POST, handleUpdateText);
     server.on("/select-profile", HTTP_GET, handleSelectProfile);
     server.on("/toggle-feature", HTTP_GET, handleToggleFeature);
+    server.on("/favicon.svg", handleFavicon); // Route target   
+      // 2. ADAPT THIS: Route all 404 / captive portal checks to your homepage
+    //server.onNotFound(handleRoot);  // attempt to make autoload 
+
 }
 
 void startConfigPortal() {
