@@ -13,22 +13,47 @@
 // --------------- //
 
 #define pulse_generator_wrap_target 0
-#define pulse_generator_wrap 3
+#define pulse_generator_wrap 28
 #define pulse_generator_pio_version 0
 
 static const uint16_t pulse_generator_program_instructions[] = {
             //     .wrap_target
-    0xc040, //  0: irq    clear 0
-    0xe000, //  1: set    pins, 0
-    0xe001, //  2: set    pins, 1
-    0xc000, //  3: irq    nowait 0
+    0x90a0, //  0: pull   block           side 0
+    0x7801, //  1: out    pins, 1         side 1
+    0x6001, //  2: out    pins, 1
+    0x6001, //  3: out    pins, 1
+    0x6001, //  4: out    pins, 1
+    0x6001, //  5: out    pins, 1
+    0x6001, //  6: out    pins, 1
+    0x6001, //  7: out    pins, 1
+    0x6001, //  8: out    pins, 1
+    0x6001, //  9: out    pins, 1
+    0x6001, // 10: out    pins, 1
+    0x6001, // 11: out    pins, 1
+    0x6001, // 12: out    pins, 1
+    0x6001, // 13: out    pins, 1
+    0x6001, // 14: out    pins, 1
+    0x6001, // 15: out    pins, 1
+    0x6001, // 16: out    pins, 1
+    0x6001, // 17: out    pins, 1
+    0x6001, // 18: out    pins, 1
+    0x6001, // 19: out    pins, 1
+    0x6001, // 20: out    pins, 1
+    0x6001, // 21: out    pins, 1
+    0x6001, // 22: out    pins, 1
+    0x6001, // 23: out    pins, 1
+    0x6001, // 24: out    pins, 1
+    0x6001, // 25: out    pins, 1
+    0x6001, // 26: out    pins, 1
+    0x6001, // 27: out    pins, 1
+    0xd020, // 28: irq    wait 0          side 0
             //     .wrap
 };
 
 #if !PICO_NO_HARDWARE
 static const struct pio_program pulse_generator_program = {
     .instructions = pulse_generator_program_instructions,
-    .length = 4,
+    .length = 29,
     .origin = -1,
     .pio_version = pulse_generator_pio_version,
 #if PICO_PIO_VERSION > 0
@@ -39,22 +64,8 @@ static const struct pio_program pulse_generator_program = {
 static inline pio_sm_config pulse_generator_program_get_default_config(uint offset) {
     pio_sm_config c = pio_get_default_sm_config();
     sm_config_set_wrap(&c, offset + pulse_generator_wrap_target, offset + pulse_generator_wrap);
+    sm_config_set_sideset(&c, 2, true, false);
     return c;
 }
-
-static inline void pulse_generator_program_init(PIO pio, uint sm, uint offset, uint pin) {
-    pio_gpio_init(pio, pin);
-    pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
-    pio_sm_config c = pulse_generator_program_get_default_config(offset);
-    sm_config_set_set_pins(&c, pin, 1);
-    // Set clock divider to 1 for full 125MHz speed (8ns per cycle)
-    sm_config_set_clkdiv(&c, 1.0f);
-    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
-    pio_sm_init(pio, sm, offset, &c);
-    // Set pin HIGH by default (inactive state)
-    pio_sm_set_pins_with_mask(pio, sm, (1u << pin), (1u << pin));
-    pio_sm_set_enabled(pio, sm, true);
-}
-
 #endif
 

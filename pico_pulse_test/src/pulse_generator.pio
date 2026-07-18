@@ -1,32 +1,39 @@
 ; pulse_generator.pio
 
 .program pulse_generator
+.side_set 1 opt
 
-; Total duration target: 25 cycles (200ns at 125MHz)
-; Pin starts HIGH.
-
-    irq clear 0    ; 1 cycle  | Clear the IRQ flag before starting
-    set pins, 0    ; 11 cycles| Force pin LOW (Active state). 1 + 10 delay = 11 cycles (88ns)
-    set pins, 1    ; 12 cycles| Force pin HIGH (Inactive state). 1 + 11 delay = 12 cycles (96ns)
-    irq 0          ; 1 cycle  | Raise IRQ flag to unblock Core 1 CPU immediately
-                   ; Total = 1 + 11 + 12 + 1 = 25 cycles (Exactly 200ns total execution)
-
-% c-sdk {
-static inline void pulse_generator_program_init(PIO pio, uint sm, uint offset, uint pin) {
-    pio_gpio_init(pio, pin);
-    pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
-
-    pio_sm_config c = pulse_generator_program_get_default_config(offset);
-    sm_config_set_set_pins(&c, pin, 1);
+.wrap_target
+    pull block  side 0   ; 1 cycle
     
-    // Set clock divider to 1 for full 125MHz speed (8ns per cycle)
-    sm_config_set_clkdiv(&c, 1.0f);
-    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
+    ; Stream 27 individual bits (25 target bits + 2 calibration padding bits = 200ns)
+    out pins, 1 side 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1
+    out pins, 1          ; Calibration padding bit 1 (+8ns)
+    out pins, 1          ; Calibration padding bit 2 (+8ns)
 
-    pio_sm_init(pio, sm, offset, &c);
-    
-    // Set pin HIGH by default (inactive state)
-    pio_sm_set_pins_with_mask(pio, sm, (1u << pin), (1u << pin));
-    pio_sm_set_enabled(pio, sm, true);
-}
-%}
+    irq wait 0  side 0   ; Total execution window now locked onto exactly 200ns
+.wrap
