@@ -1,0 +1,15 @@
+.program output_pulse
+
+    ; Force the pin to start HIGH when the program first loads
+    set pins, 1         
+
+.wrap_target
+    pull block          ; Wait for a trigger command from Core 1
+    out x, 32           ; Load the loop counter
+    set pins, 0         ; Turn the pin LOW (Inverted Start)
+
+pulse_loop:
+    jmp x-- pulse_loop  ; Decrement counter (takes exactly 2 clock cycles)
+
+    set pins, 1         ; Turn the pin back HIGH (Inverted End)
+.wrap

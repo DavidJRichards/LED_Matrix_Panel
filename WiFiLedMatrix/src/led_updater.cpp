@@ -261,7 +261,6 @@ void setup1() {
 // Drive 180 bits per channel per row, then toggles common rows
 void scan_and_render_display(int ledBrightnes) {
   int  brightness = ledBrightnes * 20; // = on time, off for 2000-brightness uS
-  digitalWriteFast(ENABLE_PIN, LOW); // display on
     // 1. Inverted Vertical Scan (Row 6 down to 0)
   for (int row = MATRIX_ROWS - 1; row >= 0; row--) {
     
@@ -316,16 +315,15 @@ void scan_and_render_display(int ledBrightnes) {
     delayMicroseconds(1);
     digitalWriteFast(LATCH_PIN, LOW);
 
-    delayMicroseconds(2000-brightness); // limit brightness by holding off fot a bit
   // 3. Switch on current row driver line
     digitalWriteFast(ROW_PINS[row], HIGH);
-   delayMicroseconds(1);
 
-    // 4. Hold active frame on display matrix for 1.5 milliseconds
-    //if(ledBrightnes>5)
-      delayMicroseconds(brightness);  // led on time 
-  }
-  digitalWriteFast(ENABLE_PIN, HIGH); // display off
+    delayMicroseconds(2000-brightness);
+ // light the display
+    digitalWriteFast(ENABLE_PIN, LOW); // display on
+    delayMicroseconds(brightness);
+    digitalWriteFast(ENABLE_PIN, HIGH); // display off
+   }
 }
 
 
