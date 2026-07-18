@@ -1,0 +1,23 @@
+; pulse_generator.pio
+
+.program pulse_generator
+.side_set 1 opt
+
+; Consumes only 7 instructions (Well within the 32 instruction limit)
+; GPIO 14 -> Side-Set driven (1 = Trigger HIGH, 0 = Trigger LOW)
+; GPIO 15 -> OUT bitstream driven (1 = Inactive HIGH, 0 = Active LOW)
+
+.wrap_target
+    pull block  side 0   ; 1 cycle | Wait for payload word 0. Trigger rests LOW.
+    out x, 32            ; 1 cycle | Copy total iteration count payload (always 99) to X
+    
+    ; The first bit shift drives the Trigger pin HIGH (side 1)
+    out pins, 1 side 1   ; 1 cycle | Trigger snaps HIGH, shifts first bit to Pin 15
+    
+stream_loop:
+    out pins, 1          ; 1 cycle | Shift remaining bits to Pin 15 consecutively
+    jmp x-- stream_loop  ; 1 cycle | Loop runs exactly 99 times (Total 100 cycles = 800ns)
+
+    mov pins, !null      ; 1 cycle | Forcibly clamp Pin 15 HIGH during the idle period
+    irq wait 0  side 0   ; 1 cycle | Drop Trigger LOW (side 0) and unblock Core 1
+.wrap

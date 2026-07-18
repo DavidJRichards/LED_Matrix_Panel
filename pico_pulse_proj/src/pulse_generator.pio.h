@@ -13,47 +13,25 @@
 // --------------- //
 
 #define pulse_generator_wrap_target 0
-#define pulse_generator_wrap 28
+#define pulse_generator_wrap 6
 #define pulse_generator_pio_version 0
 
 static const uint16_t pulse_generator_program_instructions[] = {
             //     .wrap_target
     0x90a0, //  0: pull   block           side 0
-    0x7801, //  1: out    pins, 1         side 1
-    0x6001, //  2: out    pins, 1
+    0x6020, //  1: out    x, 32
+    0x7801, //  2: out    pins, 1         side 1
     0x6001, //  3: out    pins, 1
-    0x6001, //  4: out    pins, 1
-    0x6001, //  5: out    pins, 1
-    0x6001, //  6: out    pins, 1
-    0x6001, //  7: out    pins, 1
-    0x6001, //  8: out    pins, 1
-    0x6001, //  9: out    pins, 1
-    0x6001, // 10: out    pins, 1
-    0x6001, // 11: out    pins, 1
-    0x6001, // 12: out    pins, 1
-    0x6001, // 13: out    pins, 1
-    0x6001, // 14: out    pins, 1
-    0x6001, // 15: out    pins, 1
-    0x6001, // 16: out    pins, 1
-    0x6001, // 17: out    pins, 1
-    0x6001, // 18: out    pins, 1
-    0x6001, // 19: out    pins, 1
-    0x6001, // 20: out    pins, 1
-    0x6001, // 21: out    pins, 1
-    0x6001, // 22: out    pins, 1
-    0x6001, // 23: out    pins, 1
-    0x6001, // 24: out    pins, 1
-    0x6001, // 25: out    pins, 1
-    0x6001, // 26: out    pins, 1
-    0xa00b, // 27: mov    pins, ~null
-    0xd020, // 28: irq    wait 0          side 0
+    0x0043, //  4: jmp    x--, 3
+    0xa00b, //  5: mov    pins, ~null
+    0xd020, //  6: irq    wait 0          side 0
             //     .wrap
 };
 
 #if !PICO_NO_HARDWARE
 static const struct pio_program pulse_generator_program = {
     .instructions = pulse_generator_program_instructions,
-    .length = 29,
+    .length = 7,
     .origin = -1,
     .pio_version = pulse_generator_pio_version,
 #if PICO_PIO_VERSION > 0

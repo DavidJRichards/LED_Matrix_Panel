@@ -4,36 +4,39 @@
 .side_set 1 opt
 
 .wrap_target
-    pull block  side 0   ; 1 cycle
+    pull block  side 0   ; 1 cycle  | Wait for config. Trigger rests LOW (side 0).
     
-    ; Stream 27 individual bits (25 target bits + 2 calibration padding bits = 200ns)
-    out pins, 1 side 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1
-    out pins, 1          ; Calibration padding bit 1 (+8ns)
-    out pins, 1          ; Calibration padding bit 2 (+8ns)
+    ; Stream 26 bits sequentially (26 instructions * 8ns = 208ns total chunk window)
+    out pins, 1 side 1   ; Bit 0  | Trigger snaps HIGH (side 1)
+    out pins, 1          ; Bit 1
+    out pins, 1          ; Bit 2
+    out pins, 1          ; Bit 3
+    out pins, 1          ; Bit 4
+    out pins, 1          ; Bit 5
+    out pins, 1          ; Bit 6
+    out pins, 1          ; Bit 7
+    out pins, 1          ; Bit 8
+    out pins, 1          ; Bit 9
+    out pins, 1          ; Bit 10
+    out pins, 1          ; Bit 11
+    out pins, 1          ; Bit 12
+    out pins, 1          ; Bit 13
+    out pins, 1          ; Bit 14
+    out pins, 1          ; Bit 15
+    out pins, 1          ; Bit 16
+    out pins, 1          ; Bit 17
+    out pins, 1          ; Bit 18
+    out pins, 1          ; Bit 19
+    out pins, 1          ; Bit 20
+    out pins, 1          ; Bit 21
+    out pins, 1          ; Bit 22
+    out pins, 1          ; Bit 23
+    out pins, 1          ; Bit 24
+    out pins, 1          ; Bit 25
 
-    irq wait 0  side 0   ; Total execution window now locked onto exactly 200ns
+    ; RESTING OVERRIDE: Forcibly drive Pin 15 HIGH using a bitwise NOT NULL operation.
+    ; This guarantees that during the 50us pull stall period, the pulse pin is pinned HIGH.
+    mov pins, !null      ; 1 cycle  | Pin 15 snaps HIGH instantly
+
+    irq wait 0  side 0   ; 1 cycle  | Trigger drops LOW (side 0) and releases Core 1 CPU
 .wrap
