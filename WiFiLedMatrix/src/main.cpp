@@ -95,7 +95,31 @@ void setup() {
 
     Serial.println("[SYSTEM] Debugging stream linked successfully. Commencing initialization...");
 
-    // 2. Initialize physical hardware components and custom CGRAM font profiles
+    // ====================================================================
+    // NEW: DYNAMIC SELF-NAMING CHIP REGISTER ENGINE
+    // Fetches the unique chip hardware MAC to prevent local network collisions
+    // ====================================================================
+    uint8_t mac[6];
+    WiFi.macAddress(mac); // Read 6-byte unique physical MAC array
+    
+    char uniqueSuffix[5];
+    // Formats the last 2 bytes of the MAC as 4 lowercase hex characters (e.g., "a1b2")
+    snprintf(uniqueSuffix, sizeof(uniqueSuffix), "%02x%02x", mac[4], mac[5]);
+    
+     // 1. Keeps your local router hostname uniquely mapped to prevent collisions
+    dynamicHostname = "ledmatrix-" + String(uniqueSuffix);
+    
+    // 2. FIXED: Locks the setup portal name to your clean, static configuration
+    dynamicApSSID   = "LedMatrix_Portal"; 
+
+    Serial.print("[SYSTEM] Unique Client Hostname: http://");
+    Serial.print(dynamicHostname);
+    Serial.println(".local");
+    Serial.print("[SYSTEM] Universal Fallback Hotspot: ");
+    Serial.println(dynamicApSSID);
+    // Continue initialization...
+    
+   // 2. Initialize physical hardware components and custom CGRAM font profiles
     initMyHardware();
     Serial.println("[SYSTEM] Motherboard peripheral pins and custom font profiles armed.");
     

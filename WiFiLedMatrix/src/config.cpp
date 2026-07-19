@@ -47,3 +47,7 @@ unsigned long lastBellPulseTime = 0; // Non-blocking timer clock
 // Initialize regular interval chime states
 int bellIntervalMinutes = 0;         // Default: 0 (Off / Disabled)
 unsigned long lastIntervalBellTime = 0; // Tracks historical minutes steps
+
+// Add these to the absolute bottom of src/config.cpp
+String dynamicHostname = "ledmatrix"; 
+String dynamicApSSID   = "LedMatrix_Portal";

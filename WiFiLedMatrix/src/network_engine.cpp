@@ -229,9 +229,10 @@ void handleSelectProfile() {
             "<title>Switching Networks</title>"
             "<style>body{font-family:sans-serif;text-align:center;padding:50px;background:#f7f9fa;color:#333;}</style>"
             "<script>"
-            "setTimeout(function(){ window.location.href = 'http://ledmatrix.local'; }, 3500);"
+            // FIXED: Redirection path now targets this specific board's unique hostname
+            "setTimeout(function(){ window.location.href = 'http://" + dynamicHostname + ".local/'; }, 3500);"
             "</script></head><body>"
-            "<h2>\xF0\x9F\x84\x94 Switching Network Profiles...</h2>"
+            "<h2>🔄 Switching Network Profiles...</h2>"
             "<p>Connecting terminal to <strong>" + targetSSID + "</strong>.</p>"
             "<p>Please allow 3 seconds for the radio layers to settle.</p>"
             "</body></html>";
@@ -300,18 +301,21 @@ void startConfigPortal() {
     
     WiFi.disconnect(true);
     WiFi.mode(WIFI_AP);
-    WiFi.softAP("Led_Matrix_Config_Portal");
+    
+    // FIXED: Uses your dynamic uncollidable Hotspot name string
+    WiFi.softAP(dynamicApSSID.c_str());
     
     setupServerRoutes();
     server.begin();
 
-    if (MDNS.begin("ledmatrix")) {
+    // FIXED: Broadcast the fallback local address using the unique name
+    if (MDNS.begin(dynamicHostname.c_str())) {
         MDNS.addService("http", "tcp", 80);
     }
 
     fixedMsgLine1 = "SETUP MODE: http://192.168.4.1";
     fixedMsgLine2 = "------------------------------------";
-    variableMsg  = "Connect to portal to save sites.";
+    variableMsg  = "AP: " + dynamicApSSID; // Display the specific portal name on the screen
     
     // ====================================================================
     // DUPLICATED SERIAL ECHO
@@ -447,7 +451,8 @@ void checkWifiConnectionStep() {
             setupServerRoutes();       
             server.begin();            
             
-            if (MDNS.begin("ledmatrix")) {
+            // FIXED: Register mDNS under this device's strict lowercase custom domain
+            if (MDNS.begin(dynamicHostname.c_str())) {
                 MDNS.addService("http", "tcp", 80);
             }
 

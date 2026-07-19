@@ -26,9 +26,18 @@
 </head>
 <body>
 
-    <!-- UPDATED: STATUS BAR WITH ACTIVE CONFIGURATION TRACKING -->
+    <!-- UPDATED: STATUS BAR WITH ACTIVE HYPERLINK HOSTNAME TRACKING -->
     <h1>LED Matrix Control</h1>
     <div class="status-bar" style="background: #e1dfdd; padding: 12px; border-radius: 4px; font-weight: bold; margin-bottom: 20px; display: flex; flex-direction: column; gap: 4px;">
+        
+        <div style="display: flex; justify-content: space-between; padding-bottom: 4px; margin-bottom: 4px; border-bottom: 1px dashed #bbb;">
+            <span>Device Hostname:</span>
+            <!-- FIXED: Wrapped the token in an active hyperlink block pointing to its own local domain -->
+            <a href="http://%HOSTNAME%.local/" style="color: #e2a100; text-decoration: underline; font-family: monospace;">
+                http://%HOSTNAME%.local/
+            </a>
+        </div>
+        
         <div style="display: flex; justify-content: space-between;">
             <span>Active Network:</span>
             <span id="active-ssid">%CONNECTED_SSID%</span>

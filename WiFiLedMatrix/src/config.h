@@ -69,3 +69,7 @@ extern unsigned long lastBellPulseTime;
 // --- Regular Interval Chime Registers ---
 extern int bellIntervalMinutes;         // 0 = Off, otherwise interval in minutes
 extern unsigned long lastIntervalBellTime; // Non-blocking timer clock
+
+// Add these to the absolute bottom of src/config.h
+extern String dynamicHostname; // Will hold "ledmatrix-xxxx"
+extern String dynamicApSSID;   // Will hold "LedMatrix_Portal"
