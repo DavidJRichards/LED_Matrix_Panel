@@ -9,6 +9,19 @@
 #include "config.h"
 #include "hardware.h"
 #include "network_engine.h"
+#include "matrix_pulse_manager.h"
+
+#define TRIGGER_PIN 27//14  // Scope Channel 1 -> Fixed 1600ns Positive Trigger Pulse
+#define ENABLE_PIN  15  // Scope Channel 2 -> Active LOW Pulse, then HIGH Remainder
+//#define POT_PIN     26  
+
+MatrixPulseManager pulseManager;
+
+volatile uint32_t debug_pulse_counter = 0;
+volatile uint32_t debug_current_low_ns = 0;
+
+
+
 
 #if 0
 #include <DNSServer.h>  // attempt to make autoload 
@@ -42,7 +55,16 @@ void onOTAEnd(bool success) {
 //pico_ota picoOta;
 
 void setup() {
-    // 1. Initialize the USB hardware serial debugging pipeline
+    #if 0
+  #define ENABLE_PIN_ 15
+  pinMode(ENABLE_PIN_, OUTPUT);
+  digitalWriteFast(ENABLE_PIN_, HIGH); //disable
+  for (int i = 0; i < 3; i++) {
+    pinMode(i+7, OUTPUT);
+    digitalWriteFast(i+7, LOW);
+  }
+#endif
+  // 1. Initialize the USB hardware serial debugging pipeline
     Serial.begin(115200);
 
     // Time-Bounded Serial Monitor Handshake Pass
@@ -53,6 +75,14 @@ void setup() {
         }
         delay(10); 
     }
+//print_line(1, "1");
+ #if 0
+    if (pulseManager.begin(pio1, TRIGGER_PIN, ENABLE_PIN)) {
+        Serial.println("[SUCCESS] System locked onto factory default 125MHz clock profile.");
+    } else {
+        Serial.println("[ERROR] Core hardware allocation failure!");
+    }
+#endif
 
     // ====================================================================
     // FIXED BUFFER PASS: Allow the built-in terminal cache to stabilize
@@ -78,13 +108,14 @@ void setup() {
     }
 
     // ... Keep the remainder of your setup() loading routines and json file parsing loops exactly as they are ...
+//print_line(2, "2");
 
     pinMode(LED_BUILTIN, OUTPUT);
     pinMode(CONFIG_PIN, INPUT_PULLUP);
  
     analogReadResolution(ADC_RESOLUTION);
     pinMode(LDR_PIN, INPUT);   
-
+ 
     // led_setup(); used to be called here before split off to setup1() task
 
     File file = LittleFS.open("/networks.json", "r");
@@ -111,7 +142,8 @@ void setup() {
 
     WiFi.mode(WIFI_STA);
     WiFi.disconnect();
-
+ 
+//print_line(3, "3");
     if (digitalRead(CONFIG_PIN) == LOW || !LittleFS.exists("/networks.json")) {
         startConfigPortal();
 #if 0
@@ -125,7 +157,6 @@ void setup() {
             startConfigPortal();
         }
     }
-
     syncExternalHardware(); 
 
     clearDisplay();
@@ -136,6 +167,7 @@ void setup() {
   ElegantOTA.onStart(onOTAStart); // Register the pre-flash hook
   // Register the end hook to refresh mid-runtime
   ElegantOTA.onEnd(onOTAEnd);
+
 }
 
 
@@ -144,7 +176,6 @@ void loop() {
     // 1. ADD THIS: Keep processing background DNS rerouting
     dnsServer.processNextRequest();
 #endif
-
     // Keep web routes active at all times to prevent unresponsive port 80 blocks
     server.handleClient();
     
@@ -228,6 +259,11 @@ void loop() {
         digitalWrite(LED_BUILTIN, LOW);  // LED stays off when flag is INACTIVE
         led_brightness = ledMatrixBrightness;
     }
+
+#if 0
+   // Send the integer directly to the manager class API
+    pulseManager.set_width_percent(led_brightness);
+#endif
 
     // scan_and_render_display(led_brightness); used to be called here before split off to loop1() task
 
