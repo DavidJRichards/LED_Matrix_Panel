@@ -31,14 +31,14 @@ int bestProfileIndex = -1;
 bool appFeatureFlag = false; // Starts off by default
 
 // Add this line at the absolute bottom of your existing src/config.cpp:
-int ledMatrixBrightness = 5; // Default startup intensity register
+int ledMatrixBrightness = 35; // Default startup intensity register
 int led_brightness = ledMatrixBrightness;
 
 const unsigned long FILTER_INTERVAL_MS = 50; 
 // Shift factor of 6 means internal values are scaled by 64 (2^6).
 // A filter weight of 1 creates a slow, smooth response (~3 second transition time at 50ms intervals).
 const int FILTER_SHIFT = 6;
-const int FILTER_WEIGHT = 1; 
+const int FILTER_WEIGHT = 3; 
 
 // Add these to the absolute bottom of src/config.cpp
 int bellPulseCounter = 0; // Tracks active pulse count
@@ -51,3 +51,14 @@ unsigned long lastIntervalBellTime = 0; // Tracks historical minutes steps
 // Add these to the absolute bottom of src/config.cpp
 String dynamicHostname = "ledmatrix"; 
 String dynamicApSSID   = "LedMatrix_Portal";
+
+// Add this line at the absolute bottom of src/config.cpp:
+bool isBooting = true; // Initializes to true on power-on
+
+// Add this line at the absolute bottom of src/config.cpp:
+String currentTargetSSID = ""; // Initializes clean on boot
+
+// Initialize isolated network supervisor timer register
+unsigned long lastWatchdogCheckTime = 0; // Tracks 10-second health loops independently
+
+bool isUpdating = false;

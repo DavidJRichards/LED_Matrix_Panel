@@ -127,8 +127,13 @@ void ringBell() {
 }
 
 void initMyHardware() {
+
+    analogReadResolution(ADC_RESOLUTION);
+    pinMode(LDR_PIN, INPUT);   
+
     pinMode(BELL_PIN, OUTPUT);
     digitalWrite(BELL_PIN, LOW);
+
     pinMode(VFD_RESET_PIN, OUTPUT);
     pinMode(VFD_BUSY_PIN, INPUT);
 
@@ -158,24 +163,22 @@ void initMyHardware() {
 void syncExternalHardware() {
     unsigned long currentMillis = millis();
 
-    // ====================================================================
-    // UNIFIED NON-BLOCKING MULTI-CHIME OSCILLATOR
-    // Driven directly via the high-frequency 50ms sync loop pipeline!
-    // ====================================================================
+    // 1. Asynchronous non-blocking multi-chime oscillator loop tracking ticks
     if (bellPulseCounter > 0) {
         if (currentMillis - lastBellPulseTime >= 150) {
             lastBellPulseTime = currentMillis;
-            
-            // Generate a rapid, crisp 70ms audio pulse on your horn pin
             tone(BELL_PIN, 2500, 70); 
             bellPulseCounter--; 
         }
     }
 
-    // 1. Capture the raw timestamp integers from the core clock engine
+    // ====================================================================
+    // SHARED UNIFIED SCOPE DECLARATIONS
+    // Declared once at the top so variables can be safely read anywhere inside the function
+    // ====================================================================
     time_t now = time(nullptr);
     struct tm* timeInfo = localtime(&now);
-    char clockBuffer[40] = {0}; // Sized safely at 40 chars
+    char clockBuffer[40] = {0};
 
     if (timeInfo->tm_year > 70) {
         snprintf(clockBuffer, sizeof(clockBuffer), "%02d:%02d:%02d", 
@@ -184,7 +187,13 @@ void syncExternalHardware() {
         snprintf(clockBuffer, sizeof(clockBuffer), "Syncing...");
     }
 
-    // 2. Track independent rolling tick clocks for marquee pacing
+    String ipAddressStr = "0.0.0.0";
+    if (isPortalMode) {
+        ipAddressStr = "192.168.4.1";
+    } else if (WiFi.status() == 3) { // 3 = WL_CONNECTED
+        ipAddressStr = WiFi.localIP().toString();
+    }
+
     static unsigned long lastHardwareScrollTime = 0;
     static uint8_t scrollOffset = 0;
 
@@ -193,19 +202,42 @@ void syncExternalHardware() {
         scrollOffset++;
     }
 
-    // Load raw strings from global 251-byte RAM array buffers
+    // ====================================================================
+    // TRANSITION OPERATING MODES (Runs during boot or configuration)
+    // ====================================================================
+    if (isBooting || isConnectingWifi || isPortalMode) {
+        if (isPortalMode) {
+            // FIXED STREAMLINED AP MODE LAYOUT: 
+            // Fits cleanly inside your 30/40 character external matrix boundaries!
+            print_line(0, ">  AP SETUP PORTAL ACTIVE    <");
+            print_line(1, ("Connect to: " + dynamicApSSID).c_str());     // Displays "Connect to: LedMatrix_Portal"
+            print_line(2,  "Open URL: http://192.168.4.1");
+            print_line(3, ("Hostname: " + dynamicHostname + ".local").c_str()); // Displays "Host Name: ledmatrix-xxxx.local"
+        } else {
+            // Handshake Mode Status Layout
+            print_line(0, "> CONNECTING TO ACCESS POINT <");
+            print_line(1, ("Host Id: " + dynamicHostname).c_str());
+            print_line(2, ("WiFi AP: " + currentTargetSSID).c_str());
+            print_line(3, "Dynamic IP Lease Pending...      ");
+        }
+        return; // Halt text scrollers while network interfaces are shifting
+    }
+
+    // ====================================================================
+    // STANDARD PRODUCTION MODE (Executes only when fully online)
+    // ====================================================================
     String rawArray[4] = { String(appText1), String(appText2), String(appText3), String(appText4) };
     String finalLines[4];
 
-    // 3. Process the strings for your 40-column LED matrix outputs
     for (int i = 0; i < 4; i++) {
-        // Expand the live atomic clock macro first
+        // Apply unified $ token macro expansions
         rawArray[i].replace("$TIME$", String(clockBuffer));
+        rawArray[i].replace("$HOSTNAME$", dynamicHostname);
+        rawArray[i].replace("$IP_ADDR$", ipAddressStr);
 
-        // Strip acoustic bell codes out so they don't corrupt LED screen matrices
+        // Strip acoustic codes out so they don't corrupt matrix panels
         String processedString = "";
         int rawLength = rawArray[i].length();
-
         for (int k = 0; k < rawLength; k++) {
             if (rawArray[i][k] == '^' && (k + 1 < rawLength) && (rawArray[i][k + 1] == 'g' || rawArray[i][k + 1] == 'G')) {
                 k++; 
@@ -223,7 +255,7 @@ void syncExternalHardware() {
 
         // Apply 40-column dynamic marquee scroller slicing
         if (processedString.length() > 30) {
-            String paddedText = processedString + "        "; // 8 spaces loop marquee gap
+            String paddedText = processedString + "        "; 
             int currentOffset = scrollOffset % paddedText.length();
             String rolledText = paddedText.substring(currentOffset) + paddedText.substring(0, currentOffset);
             finalLines[i] = rolledText.substring(0, 30); 
@@ -232,12 +264,15 @@ void syncExternalHardware() {
         }
     }
 
-    // Dispatch the clean, chime-stripped text blocks to channels 0-3
-    print_line(0, finalLines[0].c_str());
-    print_line(1, finalLines[1].c_str());
-    print_line(2, finalLines[2].c_str());
-    print_line(3, finalLines[3].c_str());
+    if(!isUpdating)
+    {
+        print_line(0, finalLines[0].c_str());
+        print_line(1, finalLines[1].c_str());
+        print_line(2, finalLines[2].c_str());
+        print_line(3, finalLines[3].c_str());
+    }
 }
+
 
 struct LutPoint {
     int adcVal;         // Range: 0 to 4095
@@ -248,9 +283,9 @@ struct LutPoint {
 // Note: Low ADC values = High light intensity = High brightness
 const LutPoint LOOKUP_TABLE[] = {
     {282,   100},  // Direct intense light: Max brightness (100%)
-    {1000,  100},   // Bright indoor / daylight (~70%)
-    {1969,  35},   // Typical room lighting: Baseline (~35%)
-    {3000,  15},   // Very dim room (~15%)
+    {1000,  90},   // Bright indoor / daylight (~70%)
+    {1969,  80},   // Typical room lighting: Baseline (~35%)
+    {3000,  70},   // Very dim room (~15%)
     {3833,  5}     // Total darkness: Minimum safety brightness (~5%)
 };
 

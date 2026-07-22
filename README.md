@@ -8,6 +8,8 @@ Software to drive vinatge LED panels
 
 ## rp2040 pico-w full panel driver
 
+![](images/interface-board.png)
+
 The bus station led matrix display now has WiFi, initially it acts as a station which you can connect to to enter your local router details to make a permanent connection. 
 
 ![wifi setup](images/wifi_setup.png)
@@ -64,4 +66,8 @@ I shall probably need to extend the micro’s wifi aerial to the front panel per
 |         |LDR    |3v3 PU |    |    |            |
 
 
+## Modifications to original boards
 
+The bus station display has several modules befind the display controlling the system, including: power supply, modem, cpu card, and led driver card. Only the power supply and part of the led driver card are used in this update. Parts of the led driver circuit need isolating to enable the relacement signals to take their place. The modifications are mainly the lifting of certain ic legs so signals can be injected in their place. A photo below shows the location of the places where chip legs need to be lifted.
+
+![led driver board](images/led-driver-board.png) ![](images/led-driver-bottom.png)

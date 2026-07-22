@@ -211,6 +211,10 @@ void scan_and_render_display(int ledBrightnes) {
 #else
     pulseManager.fire_blocking_pulse(); 
 #endif
+    for (int i = 0; i < MATRIX_ROWS; i++) {
+      digitalWriteFast(ROW_PINS[i], LOW);
+    }
+
    }
 }
 

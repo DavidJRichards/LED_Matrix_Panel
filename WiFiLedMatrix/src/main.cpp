@@ -21,8 +21,6 @@ volatile uint32_t debug_pulse_counter = 0;
 volatile uint32_t debug_current_low_ns = 0;
 
 
-
-
 #if 0
 #include <DNSServer.h>  // attempt to make autoload 
 const byte DNS_PORT = 53;
@@ -31,7 +29,32 @@ DNSServer dnsServer;
 
 void onOTAStart() {
 //  Serial.println("OTA Update Started. Unmounting Filesystem...");
+
+    isUpdating = true;
+
   LittleFS.end(); // Safely closes all active files and drops the block handles
+
+            print_line(0, ">> WARNING: ElegantOTA UPDATE  ");
+            print_line(1, ">> IS ACTIVELY RUNNING     ");
+            //print_line(2, "");
+            print_line(3, "Do not cycle power line grids.    ");
+}
+
+void onOTAProgress(size_t current, size_t final) {
+    static unsigned long ota_progress_millis = 0;
+    char buff[30]="Line 2";
+    // 1. Calculate custom metric
+    int percentage = (current * 100L) / final;
+ 
+   if (millis() - ota_progress_millis > 250) {
+    ota_progress_millis = millis();
+    Serial.printf("OTA Progress: %u bytes\n", current);
+    // 2. Execute your own extended behavior (e.g., update a physical LED bar or display)
+//    Serial.printf("Extended Progress Tracker: %d%%\n", percentage);
+    sprintf(buff,"Progress %u %u", current, final);
+    print_line(2,buff);
+  }   
+
 }
 
 // Callback function triggered immediately after upload blocks are written
@@ -49,149 +72,163 @@ void onOTAEnd(bool success) {
     } else {
       //Serial.println("Failed to mount the newly uploaded filesystem partition.");
     }
+    print_line(0, ">> SUCCESS: UPDATE INSTALLED      ");
+    print_line(1, ">> FLASH SYNCHRONIZED    ");
+    print_line(2, "Restarting microprocessor...      ");
+    print_line(3, "Please stay clear safely.         ");
+    delay(1500);
+
   }
+  isUpdating = false;
+
 }
 
-//pico_ota picoOta;
-
 void setup() {
-    #if 0
-  #define ENABLE_PIN_ 15
-  pinMode(ENABLE_PIN_, OUTPUT);
-  digitalWriteFast(ENABLE_PIN_, HIGH); //disable
-  for (int i = 0; i < 3; i++) {
-    pinMode(i+7, OUTPUT);
-    digitalWriteFast(i+7, LOW);
-  }
-#endif
-  // 1. Initialize the USB hardware serial debugging pipeline
+    // 1. Initialize the USB hardware serial debugging pipeline
     Serial.begin(115200);
 
-    // Time-Bounded Serial Monitor Handshake Pass
+
+    // ====================================================================
+    // INITIAL PINMODES FOR STABLE HARDWARE INITIALIZATION
+    // Prevents display and control lines from floating during the 3s pause
+    // ====================================================================
+    pinMode(LED_BUILTIN, OUTPUT);
+    digitalWrite(LED_BUILTIN, LOW);
+    
+    // Explicit hardware setup for your recovery configuration override pin
+    #ifdef CONFIG_PIN
+    pinMode(CONFIG_PIN, INPUT_PULLUP);
+    #endif
+
+    // ====================================================================
+    // RESTORED: DYNAMIC SELF-NAMING CHIP REGISTER ENGINE
+    // This must execute at the absolute top so syncExternalHardware() 
+    // can read your unique MAC address suffix during the 3-second USB pause!
+    // ====================================================================
+    uint8_t mac[6];
+    WiFi.macAddress(mac); // Fetches the unique 6-byte hardware chip ID
+    
+    char uniqueSuffix[5];
+    snprintf(uniqueSuffix, sizeof(uniqueSuffix), "%02x%02x", mac[4], mac[5]); // Grab last 4 hex characters
+    
+    dynamicHostname = "ledmatrix-" + String(uniqueSuffix);
+    dynamicApSSID   = "LedMatrix_Portal";
+    currentTargetSSID = "Searching..."; // Initial state before scan completes
+
+    isBooting = true; // Engage your custom boot-screen freeze layout
+
+    // Time-Bounded Serial Monitor Handshake Pass (Max 3 seconds)
     unsigned long serialWaitStart = millis();
     while (!Serial) {
         if (millis() - serialWaitStart >= 3000) {
             break; 
         }
+        
+        // This loop now safely streams your unique "Host Id: ledmatrix-xxxx" 
+        // to your external panels instantly while waiting for the USB port!
+        syncExternalHardware();
         delay(10); 
     }
-//print_line(1, "1");
- #if 0
-    if (pulseManager.begin(pio1, TRIGGER_PIN, ENABLE_PIN)) {
-        Serial.println("[SUCCESS] System locked onto factory default 125MHz clock profile.");
-    } else {
-        Serial.println("[ERROR] Core hardware allocation failure!");
-    }
-#endif
 
-    // ====================================================================
-    // FIXED BUFFER PASS: Allow the built-in terminal cache to stabilize
-    // ====================================================================
     if (Serial) {
-        delay(200);      // Give the VS Code monitoring pane 200ms to open up
-        Serial.flush();  // Force the internal chip hardware queues to clear completely
-        Serial.println(); // Print a clean empty spacer line to sync the terminal rows
+        delay(200);      
+        Serial.flush();  
+        Serial.println(); 
     }
+    
+    // ... Keep the remainder of your hardware pin initializations and LittleFS calls exactly as they are ...
 
     Serial.println("[SYSTEM] Debugging stream linked successfully. Commencing initialization...");
 
-    // ====================================================================
-    // NEW: DYNAMIC SELF-NAMING CHIP REGISTER ENGINE
-    // Fetches the unique chip hardware MAC to prevent local network collisions
-    // ====================================================================
-    uint8_t mac[6];
-    WiFi.macAddress(mac); // Read 6-byte unique physical MAC array
-    
-    char uniqueSuffix[5];
-    // Formats the last 2 bytes of the MAC as 4 lowercase hex characters (e.g., "a1b2")
-    snprintf(uniqueSuffix, sizeof(uniqueSuffix), "%02x%02x", mac[4], mac[5]);
-    
-     // 1. Keeps your local router hostname uniquely mapped to prevent collisions
-    dynamicHostname = "ledmatrix-" + String(uniqueSuffix);
-    
-    // 2. FIXED: Locks the setup portal name to your clean, static configuration
-    dynamicApSSID   = "LedMatrix_Portal"; 
-
-    Serial.print("[SYSTEM] Unique Client Hostname: http://");
-    Serial.print(dynamicHostname);
-    Serial.println(".local");
-    Serial.print("[SYSTEM] Universal Fallback Hotspot: ");
-    Serial.println(dynamicApSSID);
-    // Continue initialization...
-    
-   // 2. Initialize physical hardware components and custom CGRAM font profiles
+    // 2. Initialize physical hardware components and custom CGRAM font profiles
     initMyHardware();
     Serial.println("[SYSTEM] Motherboard peripheral pins and custom font profiles armed.");
-    
-    // ... Keep the remainder of your setup() loading routines exactly as they are ...
+
+    // Force an immediate refresh to display your custom initialization messages right away
+    syncExternalHardware();
+
     // 3. Mount and check the local flash file storage partition
     if (!LittleFS.begin()) {
         Serial.println("[CRITICAL ERROR] LittleFS flash storage partition failed to mount!");
     } else {
         Serial.println("[LittleFS] Storage partition mounted cleanly.");
-    }
 
-    // ... Keep the remainder of your setup() loading routines and json file parsing loops exactly as they are ...
-//print_line(2, "2");
-
-    pinMode(LED_BUILTIN, OUTPUT);
-    pinMode(CONFIG_PIN, INPUT_PULLUP);
- 
-    analogReadResolution(ADC_RESOLUTION);
-    pinMode(LDR_PIN, INPUT);   
- 
-    // led_setup(); used to be called here before split off to setup1() task
-
-    File file = LittleFS.open("/networks.json", "r");
-    if (file) {
-        JsonDocument doc;
-        if (deserializeJson(doc, file) == DeserializationError::Ok) {
-            JsonArray arr = doc.as<JsonArray>();
-            if (arr.size() > 0) {
-                JsonObject prof = arr[0].as<JsonObject>();
-                strlcpy(appText1, prof["txt1"] | "", sizeof(appText1));
-                strlcpy(appText2, prof["txt2"] | "", sizeof(appText2));
-                strlcpy(appText3, prof["txt3"] | "", sizeof(appText3));
-                strlcpy(appText4, prof["txt4"] | "", sizeof(appText4));
-                variableMsg = String(appText1);
-                 // FIXED NON-VOLATILE HOOK: Recover your flag setting right on bootup!
-                appFeatureFlag = prof["feat_flag"] | false; // Defaults to false if empty
-                    // Recover your brightness layout settings on initial boot
-                ledMatrixBrightness  = prof["vfd_bright"] | 60; // Defaults to 600 if empty
-                bellIntervalMinutes = prof["bell_int"] | 0;
-       }
+        // ====================================================================
+        // RESTORED CODE: CORE SYSTEM DATABASE FILE LOAD PIPELINE
+        // Restores your saved parameters into global RAM array slots immediately on boot
+        // ====================================================================
+        File file = LittleFS.open("/networks.json", "r");
+        if (file) {
+            JsonDocument doc;
+            if (deserializeJson(doc, file) == DeserializationError::Ok) {
+                JsonArray storedProfiles = doc.as<JsonArray>();
+                
+                // If profiles exist, pre-load the baseline profile attributes into active registers
+                if (storedProfiles.size() > 0) {
+                    // Pull indices from the first record fallback profile safely via JsonVariant
+                    JsonVariant profile = storedProfiles[0];
+                    
+                    strlcpy(appText1, profile["txt1"] | "$TIMME$", sizeof(appText1));
+                    strlcpy(appText2, profile["txt2"] | "$HOSTNAME$", sizeof(appText2));
+                    strlcpy(appText3, profile["txt3"] | "$IP_ADDR$", sizeof(appText3));
+                    strlcpy(appText4, profile["txt4"] | "djrm", sizeof(appText4));
+                    
+                    appFeatureFlag = profile["feat_flag"] | false;
+                    ledMatrixBrightness = profile["vfd_bright"] | 35;
+                    bellIntervalMinutes = profile["bell_int"] | 0;
+                    
+                    Serial.println("[DATABASE] Successfully loaded message text matrices into running RAM registers on boot!");
+                    Serial.print("[DATABASE] Line 1 Text: "); Serial.println(appText1);
+                } else {
+                    Serial.println("[DATABASE INFO] Profiles array is currently empty. Waiting for web GUI configuration.");
+                }
+            } else {
+                Serial.println("[DATABASE ERROR] Failed to parse networks.json formatting structures.");
+            }
+            file.close();
+        } else {
+            Serial.println("[DATABASE INFO] No existing /networks.json config file found. Instantiating fresh environment.");
         }
-        file.close();
     }
+    
+    // ====================================================================
+    // CONFIGURATION PIN HARDWARE OVERRIDE HOOK
+    // Forces the board directly into AP Setup mode if the physical pin is shorted
+    // ====================================================================
+    bool forceAPMode = false;
+    #ifdef CONFIG_PIN
+    if (digitalRead(CONFIG_PIN) == LOW) { 
+        Serial.println("[SYSTEM] Hardware CONFIG_PIN detected LOW! Forcing configuration portal mode manually.");
+        forceAPMode = true;
+    }
+    #endif
 
-    WiFi.mode(WIFI_STA);
-    WiFi.disconnect();
- 
-//print_line(3, "3");
-    if (digitalRead(CONFIG_PIN) == LOW || !LittleFS.exists("/networks.json")) {
+    // 4. Connect to Network or Fall Back into standalone Access Point (AP) mode
+    if (forceAPMode) {
+        isBooting = false;
         startConfigPortal();
-#if 0
-          // Start DNS Server. IPAddress(192, 168, 4, 1) is the standard softAP IP
-        dnsServer.start(DNS_PORT, "*", IPAddress(192, 168, 4, 1));
-#endif
-
     } else {
+        // Attempt connecting to saved configuration profiles inside LittleFS
         if (!startConfigAndConnect()) {
-            printAtTextRow(1, "No saved profile in range.", 36);
+            Serial.println("[SYSTEM] No saved profiles available or in range. Reverting to local fallback portal.");
+            isBooting = false; 
             startConfigPortal();
         }
     }
-    syncExternalHardware(); 
 
-    clearDisplay();
-    refreshDisplay();
+    // Attach ElegantOTA dashboard at /update
+    ElegantOTA.begin(&server);    
+    ElegantOTA.onStart(onOTAStart); // Register the pre-flash hook
+    ElegantOTA.onProgress(onOTAProgress); // Register the pre-flash hook
+    // Register the end hook to refresh mid-runtime
+    ElegantOTA.onEnd(onOTAEnd);
 
-  // Attach ElegantOTA dashboard at /update
-  ElegantOTA.begin(&server);    
-  ElegantOTA.onStart(onOTAStart); // Register the pre-flash hook
-  // Register the end hook to refresh mid-runtime
-  ElegantOTA.onEnd(onOTAEnd);
-
+     // Synchronize your independent loop timer variables right at the finish line
+    lastDisplayUpdate = millis(); 
+    lastIntervalBellTime = millis();  // Sync chime tracker
+    lastWatchdogCheckTime = millis(); // Sync watchdog tracker
+    
+    Serial.println("[SYSTEM] Initialization complete. Dropping into asynchronous state loop.\n");
 }
 
 
@@ -205,6 +242,8 @@ void loop() {
     
     // Service network name discovery profiles
     MDNS.update(); 
+
+    ElegantOTA.loop();
 
     // Service the non-blocking asynchronous Wi-Fi link step checker
     checkWifiConnectionStep();
@@ -264,6 +303,14 @@ void loop() {
         if (WiFi.status() != WL_CONNECTED) {
             server.stop();
             startConfigAndConnect();
+            // ====================================================================
+            // FIXED STARTUP TIMING HANDSHAKE
+            // Synchronize your loop timer variables right at the finish line.
+            // This guarantees your panels capture the boot text instead of skipping it!
+            // ====================================================================
+            lastDisplayUpdate = millis(); 
+            Serial.println("[SYSTEM] Initialization complete. Dropping into asynchronous state loop.\n");
+
         } else if (WiFi.RSSI() < RSSI_THRESHOLD) {
             server.stop();
             WiFi.disconnect();
@@ -281,6 +328,7 @@ void loop() {
         led_brightness = read_ldr_brightness(currentMillis);
     } else {
         digitalWrite(LED_BUILTIN, LOW);  // LED stays off when flag is INACTIVE
+        read_ldr_brightness(currentMillis); // ignore value, keep filter running
         led_brightness = ledMatrixBrightness;
     }
 
@@ -292,20 +340,36 @@ void loop() {
     // scan_and_render_display(led_brightness); used to be called here before split off to loop1() task
 
     // ====================================================================
-    // NEW: AUTOMATED REGULAR INTERVAL CHIME SUPERVISOR
-    // Evaluates your non-volatile interval clock without dynamic loop delays!
+    // 2. AUTOMATED REGULAR INTERVAL CHIME SUPERVISOR
+    // FIXED: Uses its own isolated lastIntervalBellTime tracker clock!
     // ====================================================================
-    if (bellIntervalMinutes > 0 && !isConnectingWifi && !isPortalMode) {
-        // Convert the user-selected slider minutes target directly to milliseconds
+    if (bellIntervalMinutes > 0 && !isConnectingWifi && !isPortalMode && !isBooting) {
         unsigned long intervalMsTarget = (unsigned long)bellIntervalMinutes * 60000;
 
         if (currentMillis - lastIntervalBellTime >= intervalMsTarget) {
-            lastIntervalBellTime = currentMillis; // Advance the baseline tracking frame
-            
-            ringBell(); // Sounds the professional 3-pulse acoustic alert burst!
+            lastIntervalBellTime = currentMillis; // FIXED: Added missing timer step update!
+            ringBell(); // Trigger your distinct 3-pulse audio signal burst
         }
     }
 
-
-
+    // ====================================================================
+    // 3. BACKGROUND NETWORK HEALTH & ROAMING WATCHDOG
+    // FIXED: Employs its own dedicated lastWatchdogCheckTime clock to prevent
+    // reset loops from crashing your open AP hotspot mode!
+    // ====================================================================
+    if (!isPortalMode && !isConnectingWifi && !isBooting && (currentMillis - lastWatchdogCheckTime >= checkInterval)) {
+        lastWatchdogCheckTime = currentMillis; // Advance the isolated watchdog clock window
+        
+        uint8_t currentStatus = WiFi.status();
+        if (currentStatus != 3) { // 3 = WL_CONNECTED
+            Serial.println("[WATCHDOG] Connection dropped! Re-initiating scan maps...");
+            server.stop();
+            startConfigAndConnect();
+        } else if (WiFi.RSSI() < RSSI_THRESHOLD) {
+            Serial.println("[WATCHDOG] Signal threshold depleted. Roaming to stronger profile...");
+            server.stop();
+            WiFi.disconnect();
+            startConfigAndConnect();
+        }
+    }
 }

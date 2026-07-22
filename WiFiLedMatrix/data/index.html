@@ -66,7 +66,7 @@
                 <input type="text" name="txt3" maxlength="250" value="%TXT3%">
             </div>
             <div class="form-group">
-                <label>Row 3 (Max 250 Chars):</label>
+                <label>Row 4 (Max 250 Chars):</label>
                 <input type="text" name="txt4" maxlength="250" value="%TXT4%">
             </div>
             <!-- Locate this container card inside your data/index.html template file -->
@@ -94,6 +94,25 @@
 
              <button type="submit">Apply Text Changes Only</button>
         </form>
+    </div>
+
+    <!-- UPDATE THIS SECTION INSIDE YOUR NETWORKS / CHANNELS SELECTION CONTAINER CARD -->
+    <div class="card" style="border-top-color: #e2a100;">
+        <h2>Network Configuration & Profiles</h2>
+        
+        <!-- Keep your existing profile list tables and quick-switcher panels here -->
+        <div id="profile-list-container">
+            <!-- Dynamic JavaScript profiles populate here -->
+        </div>
+
+        <!-- NEW FORCED AP BUTTON OVERRIDE WRAPPER -->
+        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ccc;">
+            <label style="font-weight: bold; color: #716f6e; display: block; margin-bottom: 5px;">Emergency Manual Fallback Control:</label>
+            <button type="button" class="btn-danger" style="background: #d83b01; color: white; width: 100%; font-weight: bold; padding: 10px;" 
+                    onclick="if(confirm('Are you sure you want to disconnect this device from Wi-Fi and drop into standalone Setup Mode?')) { window.location.href='/force-ap'; }">
+                📡 Drop Wi-Fi & Enter AP Setup Mode Now
+            </button>
+        </div>
     </div>
 
     <!-- 2. STABLE LOCATION PROFILE BUILDER WITH SSID SELECTOR -->

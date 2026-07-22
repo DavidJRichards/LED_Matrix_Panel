@@ -10,6 +10,7 @@ void buildPreloadedDashboard(String& htmlOut) {
     htmlOut = file.readString();
     file.close();
 
+    // FIXED: Ensured the original raw array configuration blocks flow back to the web portal forms
     htmlOut.replace("%TXT1%", String(appText1));
     htmlOut.replace("%TXT2%", String(appText2));
     htmlOut.replace("%TXT3%", String(appText3));
@@ -23,25 +24,18 @@ void buildPreloadedDashboard(String& htmlOut) {
     htmlOut.replace("%BRIGHT_VAL%", String(ledMatrixBrightness));
     htmlOut.replace("%INTERVAL_VAL%", String(bellIntervalMinutes));
 
-    // ====================================================================
-    // FIXED: INJECT SYSTEM WIRELESS STATE VARIABLES
-    // ====================================================================
-    if (WiFi.status() == WL_CONNECTED && !isPortalMode) {
+    if (WiFi.status() == WL_CONNECTED) {
         htmlOut.replace("%CONNECTED_SSID%", WiFi.SSID());
         htmlOut.replace("%CONNECTED_IP%", WiFi.localIP().toString());
-        
-        // Maps the clickable hyperlink straight to your friendly local router domain name
-        htmlOut.replace("%HOSTNAME%", dynamicHostname);
     } else {
-        // Portal fallback handling context
-        htmlOut.replace("%CONNECTED_SSID%", "LedMatrix_Portal Hotspot Mode");
-        htmlOut.replace("%CONNECTED_IP%", "192.168.4.1 (Gateway)");
-        
-        // FIXED PORTAL LINK HOOK: Forces link path to map securely to the fallback gateway 
-        // to prevent domain errors before the board has linked to your router
-        htmlOut.replace("http://%HOSTNAME%.local/", "http://192.168.4.1");
+        htmlOut.replace("%CONNECTED_SSID%", "OFFLINE");
+        htmlOut.replace("%CONNECTED_IP%", "0.0.0.0 (No Link)");
     }
+
+         // Maps the clickable hyperlink straight to your friendly local router domain name
+        htmlOut.replace("%HOSTNAME%", dynamicHostname);
 }
+
 
 void commitProfileToFlash(const String& ssid, const String& pass, 
                           const String& t1, const String& t2, 

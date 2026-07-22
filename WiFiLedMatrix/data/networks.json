@@ -2,23 +2,34 @@
   {
     "ssid": "Led_Matrix_Config_Portal",
     "password": "",
-    "txt1": "  \u003C\u003C Initial WiFi settings ^g\u003E\u003E",
-    "txt2": "SSID: Led_Matrix_Config_Portal",
-    "txt3": "Web:  http://192.168.4.1 ",
-    "txt4": "alt:  LedMatrix.local",
+    "txt1": "    Initial WiFi settings",
+    "txt2": "SSID: LedMatrix_Portal",
+    "txt3": " URL: http://192.168.4.1 ",
+    "txt4": "http://ledmatrix-xxxx.local/",
     "feat_flag": true,
-    "vfd_bright": 0,
-    "bell_int": 1
+    "vfd_bright": 35,
+    "bell_int": 0
   },
   {
     "ssid": "sheds",
     "password": "",
-    "txt1": "computer shed time is $TIME$",
+    "txt1": "Computer shed time is $TIME$",
     "txt2": "!@$%^&*()-=_+[];':\u003C\u003E?,.\\`{|}~/",
-    "txt3": "The quick brown fox jumps over the lazy dog.",
-    "txt4": "Now is the time for all good men to come to the aid of the party.",
+    "txt3": "$IP_ADDR$",
+    "txt4": "http://%HOSTNAME$.local/",
     "feat_flag": true,
     "vfd_bright": 35,
     "bell_int": 1
+  },
+  {
+    "ssid": "FRITZ!Box 7530 XM",
+    "password": "56414838237004072912",
+    "txt1": "$IP_ADDR$       $TIME$",
+    "txt2": "http://$HOSTNAME$.local/",
+    "txt3": "The Quick Brown Fox Jumps Over The Lazy Dog 0123456789",
+     "txt4": "Now is the time for all good men to come to the aid of the party.",
+    "feat_flag": true,
+    "vfd_bright": 35,
+    "bell_int": 0
   }
 ]

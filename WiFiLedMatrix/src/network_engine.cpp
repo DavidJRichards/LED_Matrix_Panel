@@ -207,6 +207,8 @@ void handleSelectProfile() {
         JsonObject profile = storedProfiles[targetIndex].as<JsonObject>();
         String targetSSID = profile["ssid"].as<String>();
         String targetPass = profile["password"].as<String>();
+        // FIXED DATA LINK: Lock the name into our global register for syncExternalHardware() to see!
+        currentTargetSSID = targetSSID;
 
         // VFD Progress Tracking
         printAtTextRow(0, ">> MANUAL OVERRIDE PORTAL", 36);
@@ -276,6 +278,31 @@ void handleSelectProfile() {
     }
 }
 
+void handleForceAP() {
+    Serial.println("\n[HTTP] Incoming GET Request for Path: /force-ap");
+    Serial.println("[SYSTEM] Manual Web Request Intercepted: Forcing device into standalone AP mode!");
+
+    // Serve a clean, localized transition page to gracefully update your phone or desktop browser
+    String transitionHtml = 
+        "<html><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1.0'>"
+        "<title>Launching Setup Portal</title>"
+        "<style>body{font-family:sans-serif;text-align:center;padding:50px;background:#f7f9fa;color:#333;}</style>"
+        "<script>"
+        // Redirects your web browser straight to the static gateway IP address automatically
+        "setTimeout(function(){ window.location.href = 'http://192.168.4'; }, 2500);"
+        "</script></head><body>"
+        "<h2>\xF0\x9F\x93\xA1 Launching Local Configuration Portal...</h2>"
+        "<p>Disconnecting from your router network core.</p>"
+        "<p>Please connect your phone to the open <strong>LedMatrix_Portal</strong> hotspot in 3 seconds.</p>"
+        "</body></html>";
+
+    server.send(200, "text/html", transitionHtml);
+    delay(150); // Give the web radio socket exactly 150ms to flush the webpage bytes down the antenna
+
+    // Gracefully drop the active client link and launch the standalone portal
+    startConfigPortal();
+}
+
 
 void setupServerRoutes() {
     server.on("/", HTTP_GET, handleRoot);
@@ -284,6 +311,7 @@ void setupServerRoutes() {
     server.on("/delete", HTTP_GET, handleDelete);
     server.on("/scan", HTTP_GET, handleScan);
     server.on("/portal-beep", HTTP_GET, handleManualBeep);
+    server.on("/force-ap", HTTP_GET, handleForceAP);
     server.on("/current-ssid", HTTP_GET, handleCurrentSSID);
     server.on("/updatetext", HTTP_POST, handleUpdateText);
     server.on("/select-profile", HTTP_GET, handleSelectProfile);
@@ -296,38 +324,48 @@ void setupServerRoutes() {
 
 void startConfigPortal() {
     isPortalMode = true;
+    isConnectingWifi = false;
+    isBooting = false; 
+
+    Serial.println("\n[RADIO] >>> CRITICAL FALLBACK: Initializing Standalone Configuration Access Point");
+    
+    // 1. Gracefully shut down active application routing layers
     MDNS.end();
     server.stop();
     
+    // ====================================================================
+    // FIXED SOCKET RECOVERY LAYER: Flush old TCP state machines
+    // Gives the core exactly 200ms to release internal port 80 bindings completely
+    // ====================================================================
+    delay(200); 
+    
+    Serial.println("[RADIO] Hard-resetting radio network interfaces...");
     WiFi.disconnect(true);
+    delay(100); // Allow hardware lines to settle
+    
     WiFi.mode(WIFI_AP);
-    
-    // FIXED: Uses your dynamic uncollidable Hotspot name string
     WiFi.softAP(dynamicApSSID.c_str());
-    
-    setupServerRoutes();
-    server.begin();
+    delay(100); // Allow AP routing arrays to mount firmly
 
-    // FIXED: Broadcast the fallback local address using the unique name
+    setupServerRoutes();
+    
+    // 2. Safely re-bind and launch the listening port 80 loop structure
+    server.begin();
+    Serial.println("[HTTP] Web server listening socket successfully bound to port 80.");
+
     if (MDNS.begin(dynamicHostname.c_str())) {
         MDNS.addService("http", "tcp", 80);
+        MDNS.announce();
     }
 
     fixedMsgLine1 = "SETUP MODE: http://192.168.4.1";
     fixedMsgLine2 = "------------------------------------";
-    variableMsg  = "AP: " + dynamicApSSID; // Display the specific portal name on the screen
-    
-    // ====================================================================
-    // DUPLICATED SERIAL ECHO
-    // ====================================================================
-    Serial.println("\n--- VFD ROW PRINT ECHO ---");
-    Serial.println(fixedMsgLine1);
-    Serial.println(fixedMsgLine2);
-    Serial.println(variableMsg);
-    Serial.println("--------------------------\n");
+    variableMsg  = "AP: " + dynamicApSSID;
 
+    syncExternalHardware(); 
     refreshDisplay();
 }
+
 
 bool startConfigAndConnect() {
     if (isConnectingWifi) return true; 
@@ -363,30 +401,28 @@ bool startConfigAndConnect() {
     }
     WiFi.scanDelete();
 
+     // ====================================================================
+    // FIXED PROFILE DATA UNPACK PIPELINE (startConfigAndConnect)
+    // ====================================================================
     if (bestProfileIndex != -1) {
-        JsonObject profile = storedProfiles[bestProfileIndex].as<JsonObject>();
+        // FIXED syntax mapping to prevent silent casting crashes inside the boot logic
+        JsonVariant profile = storedProfiles[bestProfileIndex];
         String targetSSID = profile["ssid"].as<String>();
         String targetPass = profile["password"].as<String>();
         
-        // VFD Progress Tracking
+        currentTargetSSID = targetSSID;
+
+        // VFD Progress Tracking Rows
         printAtTextRow(0, ">> WI-FI STATION PORTAL", 36);
         printAtTextRow(1, "Linking: " + targetSSID, 36);
         printAtTextRow(2, "Connecting to router...", 36);
         printAtTextRow(3, "Please wait safely...", 36);
 
-        // ====================================================================
-        // DUPLICATED SERIAL ECHO
-        // ====================================================================
-        Serial.println("\n--- VFD ROW PRINT ECHO ---");
-        Serial.println("Row 0: >> WI-FI STATION PORTAL");
-        Serial.println("Row 1: Linking: " + targetSSID);
-        Serial.println("Row 2: Connecting to router...");
-        Serial.println("Row 3: Please wait safely...");
-        Serial.println("--------------------------\n");
-
-        MDNS.end();
-        server.stop();
+        Serial.println("[mDNS] Sending Roaming Goodbye Packet downstream...");
+        MDNS.end(); 
+        delay(150); 
         
+        server.stop();
         WiFi.disconnect(true);
         WiFi.mode(WIFI_STA);
 
@@ -419,27 +455,35 @@ void checkWifiConnectionStep() {
         Serial.print("/40] Status Code: ");
         Serial.println(currentStatus);
 
-        if (currentStatus == WL_CONNECTED) { // 3 = WL_CONNECTED
+        if (currentStatus == 3) { // 3 = WL_CONNECTED
             if (WiFi.localIP().toString() == "0.0.0.0" && wifiAttemptCount < 40) return; 
 
             isConnectingWifi = false;
             isPortalMode = false; 
+            isBooting = false; 
             digitalWrite(LED_BUILTIN, LOW);
 
             File file = LittleFS.open("/networks.json", "r");
             if (file) {
-                JsonDocument doc;
+                 JsonDocument doc;
                 if (deserializeJson(doc, file) == DeserializationError::Ok) {
                     JsonArray storedProfiles = doc.as<JsonArray>();
+                    
                     if (bestProfileIndex >= 0 && bestProfileIndex < storedProfiles.size()) {
-                        JsonObject profile = storedProfiles[bestProfileIndex].as<JsonObject>();
+                        // FIXED syntax mapping to grab the specific active row index safely
+                        JsonVariant profile = storedProfiles[bestProfileIndex];
+                        
                         strlcpy(appText1, profile["txt1"] | "", sizeof(appText1));
                         strlcpy(appText2, profile["txt2"] | "", sizeof(appText2));
                         strlcpy(appText3, profile["txt3"] | "", sizeof(appText3));
                         strlcpy(appText4, profile["txt4"] | "", sizeof(appText4));
+                        
                         appFeatureFlag = profile["feat_flag"] | false;
                         ledMatrixBrightness = profile["vfd_bright"] | 60;
                         bellIntervalMinutes = profile["bell_int"] | 0;
+                        
+                        Serial.println("[SYSTEM] Success! Loaded display messages safely into global RAM arrays.");
+                        Serial.print("[SYSTEM] Text Line 1 Loaded: "); Serial.println(appText1);
                     }
                 }
                 file.close();
@@ -447,13 +491,21 @@ void checkWifiConnectionStep() {
 
             syncExternalHardware();
             
+            // ====================================================================
+            // FIXED STABILITY PASS: Re-initialize the port 80 socket architecture
+            // ====================================================================
+            Serial.println("[HTTP] Tearing down temporary setup socket interfaces...");
             server.stop();             
+            delay(200); // CRUCIAL: Allow old file-streaming sockets to close down completely!
+            
+            Serial.println("[HTTP] Remounting fresh web server routes on client network...");
             setupServerRoutes();       
             server.begin();            
+            Serial.println("[HTTP] Web server listening socket successfully bound to port 80.");
             
-            // FIXED: Register mDNS under this device's strict lowercase custom domain
             if (MDNS.begin(dynamicHostname.c_str())) {
                 MDNS.addService("http", "tcp", 80);
+                MDNS.announce();
             }
 
             setenv("TZ", "GMT0BST,M3.5.0/1,M10.5.0/2", 1); 
@@ -464,19 +516,10 @@ void checkWifiConnectionStep() {
             fixedMsgLine2 = "------------------------------------";
             variableMsg  = String(appText1); 
 
-            // ====================================================================
-            // DUPLICATED SERIAL ECHO
-            // ====================================================================
-            Serial.println("\n--- VFD ROW PRINT ECHO ---");
-            Serial.println(fixedMsgLine1);
-            Serial.println(fixedMsgLine2);
-            Serial.println("Row 2/3 (Raw): " + variableMsg);
-            Serial.println("--------------------------\n");
-
             ringBell();
             clearDisplay();
             refreshDisplay();
-        } 
+        }
         else if (wifiAttemptCount >= 40) {
             isConnectingWifi = false;
             digitalWrite(LED_BUILTIN, LOW);

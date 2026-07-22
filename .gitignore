@@ -68,3 +68,13 @@ vcpkg_installed/
 Testing/
 .cache/
 WiFiLedMatrix/data/networks.json
+LED_Panel_2040/
+LED_Panel/2350/
+pico_pulse_test/
+rp2040-web-display/
+WiFiLedMatrix copy/
+WiFiManagerVFD/
+WiFiManagerVFD copy/
+
+
+

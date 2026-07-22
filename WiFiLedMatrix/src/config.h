@@ -70,6 +70,17 @@ extern unsigned long lastBellPulseTime;
 extern int bellIntervalMinutes;         // 0 = Off, otherwise interval in minutes
 extern unsigned long lastIntervalBellTime; // Non-blocking timer clock
 
+// --- Isolated Background Watchdog Clocks ---
+extern unsigned long lastWatchdogCheckTime; // NEW: Dedicated network supervisor clock
+
 // Add these to the absolute bottom of src/config.h
 extern String dynamicHostname; // Will hold "ledmatrix-xxxx"
 extern String dynamicApSSID;   // Will hold "LedMatrix_Portal"
+
+// Add this line at the absolute bottom of src/config.h:
+extern bool isBooting; // Set to true during power-up sequence to force initialization screens
+
+// Add this line at the absolute bottom of src/config.h:
+extern String currentTargetSSID; // Track the router SSID actively during boot handshakes
+
+extern bool isUpdating;
